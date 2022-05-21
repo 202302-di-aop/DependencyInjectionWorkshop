@@ -1,7 +1,6 @@
 ﻿#region
 
 using System;
-using System.Net.Http;
 
 #endregion
 
@@ -36,18 +35,18 @@ namespace DependencyInjectionWorkshop.Models
 
             var passwordFromDb = _profileDao.GetPasswordFromDb(accountId);
             var hashedPassword = _sha256Adapter.GetHashedPassword(inputPassword);
-            var currentOtp = _otpProxy.GetCurrentOtp(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+            var currentOtp = _otpProxy.GetCurrentOtp(accountId);
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
             {
-                _failedCounterProxy.ResetFailedCount(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+                _failedCounterProxy.ResetFailedCount(accountId);
                 return true;
             }
             else
             {
-                _failedCounterProxy.AddFailedCount(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+                _failedCounterProxy.AddFailedCount(accountId);
 
-                var failedCount = _failedCounterProxy.GetFailedCount(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+                var failedCount = _failedCounterProxy.GetFailedCount(accountId);
                 _nLogAdapter.LogInfo($"accountId:{accountId} failed times:{failedCount}");
 
                 _slackAdapter.Notify(accountId);
