@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 
 namespace DependencyInjectionWorkshop.Models
 {
@@ -14,11 +15,11 @@ namespace DependencyInjectionWorkshop.Models
             addFailedCountResponse.EnsureSuccessStatusCode();
         }
 
-        public bool IsAccountLocked(string accountId, HttpClient httpClient)
+        public bool IsAccountLocked(string accountId)
         {
-            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", accountId)
-                                             .GetAwaiter()
-                                             .GetResult();
+            var isLockedResponse = new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/IsLocked", accountId)
+                                                                                                               .GetAwaiter()
+                                                                                                               .GetResult();
             isLockedResponse.EnsureSuccessStatusCode();
             var isAccountLocked = isLockedResponse.Content.ReadAsAsync<bool>().Result;
             return isAccountLocked;

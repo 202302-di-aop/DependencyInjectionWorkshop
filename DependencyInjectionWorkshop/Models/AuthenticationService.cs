@@ -28,9 +28,7 @@ namespace DependencyInjectionWorkshop.Models
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
         {
-            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
-
-            var isAccountLocked = _failedCounterProxy.IsAccountLocked(accountId, httpClient);
+            var isAccountLocked = _failedCounterProxy.IsAccountLocked(accountId);
             if (isAccountLocked)
             {
                 throw new FailedTooManyTimesException() { AccountId = accountId };
@@ -38,18 +36,18 @@ namespace DependencyInjectionWorkshop.Models
 
             var passwordFromDb = _profileDao.GetPasswordFromDb(accountId);
             var hashedPassword = _sha256Adapter.GetHashedPassword(inputPassword);
-            var currentOtp = _otpProxy.GetCurrentOtp(accountId, httpClient);
+            var currentOtp = _otpProxy.GetCurrentOtp(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
             {
-                _failedCounterProxy.ResetFailedCount(accountId, httpClient);
+                _failedCounterProxy.ResetFailedCount(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
                 return true;
             }
             else
             {
-                _failedCounterProxy.AddFailedCount(accountId, httpClient);
+                _failedCounterProxy.AddFailedCount(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
 
-                var failedCount = _failedCounterProxy.GetFailedCount(accountId, httpClient);
+                var failedCount = _failedCounterProxy.GetFailedCount(accountId, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
                 _nLogAdapter.LogInfo($"accountId:{accountId} failed times:{failedCount}");
 
                 _slackAdapter.Notify(accountId);
