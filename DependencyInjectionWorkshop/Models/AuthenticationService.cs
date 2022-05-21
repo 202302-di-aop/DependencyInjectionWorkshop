@@ -27,13 +27,36 @@ namespace DependencyInjectionWorkshop.Models
         }
     }
 
+    public class Sha256Adapter
+    {
+        public Sha256Adapter()
+        {
+        }
+
+        public string GetHashedPassword(string inputPassword)
+        {
+            var crypt = new System.Security.Cryptography.SHA256Managed();
+            var hash = new StringBuilder();
+            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(inputPassword));
+            foreach (var theByte in crypto)
+            {
+                hash.Append(theByte.ToString("x2"));
+            }
+
+            var hashedPassword = hash.ToString();
+            return hashedPassword;
+        }
+    }
+
     public class AuthenticationService
     {
         private ProfileDao _profileDao;
+        private readonly Sha256Adapter _sha256Adapter;
 
         public AuthenticationService()
         {
             _profileDao = new ProfileDao();
+            _sha256Adapter = new Sha256Adapter();
         }
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
@@ -47,7 +70,7 @@ namespace DependencyInjectionWorkshop.Models
             }
 
             var passwordFromDb = _profileDao.GetPasswordFromDb(accountId);
-            var hashedPassword = GetHashedPassword(inputPassword);
+            var hashedPassword = _sha256Adapter.GetHashedPassword(inputPassword);
             var currentOtp = GetCurrentOtp(accountId, httpClient);
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
@@ -126,20 +149,6 @@ namespace DependencyInjectionWorkshop.Models
 
             var currentOtp = response.Content.ReadAsAsync<string>().Result;
             return currentOtp;
-        }
-
-        private static string GetHashedPassword(string inputPassword)
-        {
-            var crypt = new System.Security.Cryptography.SHA256Managed();
-            var hash = new StringBuilder();
-            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(inputPassword));
-            foreach (var theByte in crypto)
-            {
-                hash.Append(theByte.ToString("x2"));
-            }
-
-            var hashedPassword = hash.ToString();
-            return hashedPassword;
         }
     }
 
