@@ -22,39 +22,13 @@ namespace DependencyInjectionWorkshop.Models
                 throw new FailedTooManyTimesException(){AccountId = accountId};
             }
             
-            string passwordFromDb;
-            using (var connection = new SqlConnection("my connection string"))
-            {
-                var password = connection.Query<string>("spGetUserPassword", new { Id = accountId },
-                                                        commandType: CommandType.StoredProcedure)
-                                         .SingleOrDefault();
+            var passwordFromDb = GetPasswordFromDb(accountId);
 
-                passwordFromDb = password;
-            }
+            var hashedPassword = GetHashedPassword(inputPassword);
 
-            var crypt = new System.Security.Cryptography.SHA256Managed();
-            var hash = new StringBuilder();
-            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(inputPassword));
-            foreach (var theByte in crypto)
-            {
-                hash.Append(theByte.ToString("x2"));
-            }
-
-            var hashedPassword = hash.ToString();
-
-            var response = httpClient.PostAsJsonAsync("api/otps", accountId).Result;
-            if (response.IsSuccessStatusCode)
-            {
-            }
-            else
-            {
-                throw new Exception($"web api error, accountId:{accountId}");
-            }
-
-            var currentOtp = response.Content.ReadAsAsync<string>().Result;
+            var currentOtp = GetCurrentOtp(accountId, httpClient);
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
-            {
-                
+            { 
                 var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", accountId).Result; 
                 resetResponse.EnsureSuccessStatusCode();
                 
@@ -80,6 +54,50 @@ namespace DependencyInjectionWorkshop.Models
                 slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
                 return false;
             }
+        }
+
+        private static string GetCurrentOtp(string accountId, HttpClient httpClient)
+        {
+            var response = httpClient.PostAsJsonAsync("api/otps", accountId).Result;
+            if (response.IsSuccessStatusCode)
+            {
+            }
+            else
+            {
+                throw new Exception($"web api error, accountId:{accountId}");
+            }
+
+            var currentOtp = response.Content.ReadAsAsync<string>().Result;
+            return currentOtp;
+        }
+
+        private static string GetHashedPassword(string inputPassword)
+        {
+            var crypt = new System.Security.Cryptography.SHA256Managed();
+            var hash = new StringBuilder();
+            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(inputPassword));
+            foreach (var theByte in crypto)
+            {
+                hash.Append(theByte.ToString("x2"));
+            }
+
+            var hashedPassword = hash.ToString();
+            return hashedPassword;
+        }
+
+        private static string GetPasswordFromDb(string accountId)
+        {
+            string passwordFromDb;
+            using (var connection = new SqlConnection("my connection string"))
+            {
+                var password = connection.Query<string>("spGetUserPassword", new { Id = accountId },
+                                                        commandType: CommandType.StoredProcedure)
+                                         .SingleOrDefault();
+
+                passwordFromDb = password;
+            }
+
+            return passwordFromDb;
         }
     }
 
