@@ -12,13 +12,13 @@ namespace DependencyInjectionWorkshop.Models
         private readonly NLogAdapter _nLogAdapter;
         private readonly OtpProxy _otpProxy;
         private readonly ProfileDao _profileDao;
-        private readonly Sha256Adapter _sha256Adapter;
+        private readonly IHash _hash;
         private readonly SlackAdapter _slackAdapter;
 
         public AuthenticationService()
         {
             _profileDao = new ProfileDao();
-            _sha256Adapter = new Sha256Adapter();
+            _hash = new Sha256Adapter();
             _otpProxy = new OtpProxy();
             _slackAdapter = new SlackAdapter();
             _failedCounterProxy = new FailedCounterProxy();
@@ -34,7 +34,7 @@ namespace DependencyInjectionWorkshop.Models
             }
 
             var passwordFromDb = _profileDao.GetPasswordFromDb(accountId);
-            var hashedPassword = _sha256Adapter.Compute(inputPassword);
+            var hashedPassword = _hash.Compute(inputPassword);
             var currentOtp = _otpProxy.GetCurrentOtp(accountId);
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
