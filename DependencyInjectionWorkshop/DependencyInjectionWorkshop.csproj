@@ -79,6 +79,7 @@
     <Compile Include="Models\OtpProxy.cs" />
     <Compile Include="Models\ProfileDao.cs" />
     <Compile Include="Models\Sha256Adapter.cs" />
+    <Compile Include="Models\SlackAdapter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

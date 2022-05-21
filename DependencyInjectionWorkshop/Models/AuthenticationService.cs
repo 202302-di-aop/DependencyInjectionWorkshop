@@ -3,7 +3,6 @@
 using System;
 using System.Net.Http;
 using NLog;
-using SlackAPI;
 
 #endregion
 
@@ -14,12 +13,14 @@ namespace DependencyInjectionWorkshop.Models
         private readonly OtpProxy _otpProxy;
         private readonly ProfileDao _profileDao;
         private readonly Sha256Adapter _sha256Adapter;
+        private readonly SlackAdapter _slackAdapter;
 
         public AuthenticationService()
         {
             _profileDao = new ProfileDao();
             _sha256Adapter = new Sha256Adapter();
             _otpProxy = new OtpProxy();
+            _slackAdapter = new SlackAdapter();
         }
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
@@ -48,7 +49,7 @@ namespace DependencyInjectionWorkshop.Models
                 var failedCount = GetFailedCount(accountId, httpClient);
                 LogFailedCount(accountId, failedCount);
 
-                Notify(accountId);
+                _slackAdapter.Notify(accountId);
                 return false;
             }
         }
@@ -84,13 +85,6 @@ namespace DependencyInjectionWorkshop.Models
         {
             var logger = LogManager.GetCurrentClassLogger();
             logger.Info($"accountId:{accountId} failed times:{failedCount}");
-        }
-
-        private static void Notify(string accountId)
-        {
-            var message = $"account:{accountId} try to login failed";
-            var slackClient = new SlackClient("my api token");
-            slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
         }
 
         private static void ResetFailedCount(string accountId, HttpClient httpClient)
