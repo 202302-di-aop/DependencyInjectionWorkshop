@@ -9,31 +9,56 @@ using SlackAPI;
 
 namespace DependencyInjectionWorkshop.Models
 {
+    public class ProfileDao
+    {
+        public string GetPasswordFromDb(string accountId)
+        {
+            string passwordFromDb;
+            using (var connection = new SqlConnection("my connection string"))
+            {
+                var password = connection.Query<string>("spGetUserPassword", new { Id = accountId },
+                                                        commandType: CommandType.StoredProcedure)
+                                         .SingleOrDefault();
+
+                passwordFromDb = password;
+            }
+
+            return passwordFromDb;
+        }
+    }
+
     public class AuthenticationService
     {
+        private ProfileDao _profileDao;
+
+        public AuthenticationService()
+        {
+            _profileDao = new ProfileDao();
+        }
+
         public bool Verify(string accountId, string inputPassword, string inputOtp)
         {
             var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
-            
+
             var isAccountLocked = IsAccountLocked(accountId, httpClient);
             if (isAccountLocked)
             {
-                throw new FailedTooManyTimesException(){AccountId = accountId};
+                throw new FailedTooManyTimesException() { AccountId = accountId };
             }
-            
-            var passwordFromDb = GetPasswordFromDb(accountId); 
-            var hashedPassword = GetHashedPassword(inputPassword); 
+
+            var passwordFromDb = _profileDao.GetPasswordFromDb(accountId);
+            var hashedPassword = GetHashedPassword(inputPassword);
             var currentOtp = GetCurrentOtp(accountId, httpClient);
-            
+
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
             {
-                ResetFailedCount(accountId, httpClient); 
+                ResetFailedCount(accountId, httpClient);
                 return true;
             }
             else
-            { 
-                AddFailedCount(accountId, httpClient); 
-                
+            {
+                AddFailedCount(accountId, httpClient);
+
                 var failedCount = GetFailedCount(accountId, httpClient);
                 LogFailedCount(accountId, failedCount);
 
@@ -44,7 +69,9 @@ namespace DependencyInjectionWorkshop.Models
 
         private static bool IsAccountLocked(string accountId, HttpClient httpClient)
         {
-            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", accountId).GetAwaiter().GetResult();
+            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", accountId)
+                                             .GetAwaiter()
+                                             .GetResult();
             isLockedResponse.EnsureSuccessStatusCode();
             var isAccountLocked = isLockedResponse.Content.ReadAsAsync<bool>().Result;
             return isAccountLocked;
@@ -113,21 +140,6 @@ namespace DependencyInjectionWorkshop.Models
 
             var hashedPassword = hash.ToString();
             return hashedPassword;
-        }
-
-        private static string GetPasswordFromDb(string accountId)
-        {
-            string passwordFromDb;
-            using (var connection = new SqlConnection("my connection string"))
-            {
-                var password = connection.Query<string>("spGetUserPassword", new { Id = accountId },
-                                                        commandType: CommandType.StoredProcedure)
-                                         .SingleOrDefault();
-
-                passwordFromDb = password;
-            }
-
-            return passwordFromDb;
         }
     }
 
