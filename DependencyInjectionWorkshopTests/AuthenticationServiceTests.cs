@@ -45,6 +45,28 @@ namespace DependencyInjectionWorkshopTests
             // _failedCounter.Received(1).Reset("joey");
         }
 
+        [Test]
+        public void reset_failed_count_when_valid()
+        {
+            WhenValid("joey"); 
+            ShouldResetFailedCount("joey");
+        }
+
+        private void ShouldResetFailedCount(string accountId)
+        {
+            _failedCounter.Received(1).Reset(accountId);
+        }
+
+        private void WhenValid(string accountId)
+        {
+            GivenIsAccountLocked(accountId, false);
+            GivenPasswordFromDb(accountId, "hashed pw");
+            GivenHashedPassword("123", "hashed pw");
+            GivenCurrentOtp(accountId, "000000");
+
+            _authenticationService.Verify(accountId, "123", "000000");
+        }
+
         private void ShouldBeValid(string accountId, string inputPassword, string inputOtp)
         {
             var isValid = _authenticationService.Verify(accountId, inputPassword, inputOtp);
