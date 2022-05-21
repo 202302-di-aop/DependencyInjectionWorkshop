@@ -13,14 +13,14 @@ namespace DependencyInjectionWorkshop.Models
         private readonly OtpProxy _otpProxy;
         private readonly ProfileDao _profileDao;
         private readonly IHash _hash;
-        private readonly SlackAdapter _slackAdapter;
+        private readonly INotification _notification;
 
         public AuthenticationService()
         {
             _profileDao = new ProfileDao();
             _hash = new Sha256Adapter();
             _otpProxy = new OtpProxy();
-            _slackAdapter = new SlackAdapter();
+            _notification = new SlackAdapter();
             _failedCounterProxy = new FailedCounterProxy();
             _nLogAdapter = new NLogAdapter();
         }
@@ -49,7 +49,7 @@ namespace DependencyInjectionWorkshop.Models
                 var failedCount = _failedCounterProxy.Get(accountId);
                 _nLogAdapter.LogInfo($"accountId:{accountId} failed times:{failedCount}");
 
-                _slackAdapter.Notify(accountId);
+                _notification.Notify(accountId);
                 return false;
             }
         }
