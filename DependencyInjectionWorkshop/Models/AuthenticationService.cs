@@ -15,7 +15,7 @@ namespace DependencyInjectionWorkshop.Models
         {
             var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
             
-            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", accountId).Result; 
+            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", accountId).GetAwaiter().GetResult(); 
             isLockedResponse.EnsureSuccessStatusCode();
             if (isLockedResponse.Content.ReadAsAsync<bool>().Result)
             {
@@ -64,7 +64,16 @@ namespace DependencyInjectionWorkshop.Models
             { 
                 //失敗
                 var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", accountId).Result; 
-                addFailedCountResponse.EnsureSuccessStatusCode();
+                addFailedCountResponse.EnsureSuccessStatusCode(); 
+                
+                var failedCountResponse =
+                    httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", accountId).Result;
+
+                failedCountResponse.EnsureSuccessStatusCode();
+
+                var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
+                var logger = NLog.LogManager.GetCurrentClassLogger();
+                logger.Info($"accountId:{accountId} failed times:{failedCount}");
 
                 var message = $"account:{accountId} try to login failed";
                 var slackClient = new SlackClient("my api token");
