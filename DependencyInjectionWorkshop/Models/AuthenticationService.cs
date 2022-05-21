@@ -35,6 +35,17 @@ namespace DependencyInjectionWorkshop.Models
             var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", accountId).Result;
             resetResponse.EnsureSuccessStatusCode();
         }
+
+        public int GetFailedCount(string accountId, HttpClient httpClient)
+        {
+            var failedCountResponse =
+                httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", accountId).Result;
+
+            failedCountResponse.EnsureSuccessStatusCode();
+
+            var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
+            return failedCount;
+        }
     }
 
     public class AuthenticationService
@@ -77,23 +88,12 @@ namespace DependencyInjectionWorkshop.Models
             {
                 _failedCounterProxy.AddFailedCount(accountId, httpClient);
 
-                var failedCount = GetFailedCount(accountId, httpClient);
+                var failedCount = _failedCounterProxy.GetFailedCount(accountId, httpClient);
                 LogFailedCount(accountId, failedCount);
 
                 _slackAdapter.Notify(accountId);
                 return false;
             }
-        }
-
-        private int GetFailedCount(string accountId, HttpClient httpClient)
-        {
-            var failedCountResponse =
-                httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", accountId).Result;
-
-            failedCountResponse.EnsureSuccessStatusCode();
-
-            var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
-            return failedCount;
         }
 
         private void LogFailedCount(string accountId, int failedCount)
