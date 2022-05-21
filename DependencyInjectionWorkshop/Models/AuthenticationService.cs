@@ -9,20 +9,20 @@ namespace DependencyInjectionWorkshop.Models
     public class AuthenticationService
     {
         private readonly IFailedCounter _failedCounter;
-        private readonly NLogAdapter _nLogAdapter;
-        private readonly OtpProxy _otpProxy;
-        private readonly ProfileDao _profileDao;
         private readonly IHash _hash;
+        private readonly ILogger _logger;
         private readonly INotification _notification;
+        private readonly IOtp _otp;
+        private readonly IProfile _profile;
 
         public AuthenticationService()
         {
-            _profileDao = new ProfileDao();
+            _profile = new ProfileDao();
             _hash = new Sha256Adapter();
-            _otpProxy = new OtpProxy();
+            _otp = new OtpProxy();
             _notification = new SlackAdapter();
             _failedCounter = new FailedCounterProxy();
-            _nLogAdapter = new NLogAdapter();
+            _logger = new NLogAdapter();
         }
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
@@ -33,9 +33,9 @@ namespace DependencyInjectionWorkshop.Models
                 throw new FailedTooManyTimesException() { AccountId = accountId };
             }
 
-            var passwordFromDb = _profileDao.GetPasswordFromDb(accountId);
+            var passwordFromDb = _profile.GetPasswordFromDb(accountId);
             var hashedPassword = _hash.Compute(inputPassword);
-            var currentOtp = _otpProxy.GetCurrentOtp(accountId);
+            var currentOtp = _otp.GetCurrentOtp(accountId);
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
             {
@@ -47,7 +47,7 @@ namespace DependencyInjectionWorkshop.Models
                 _failedCounter.Add(accountId);
 
                 var failedCount = _failedCounter.Get(accountId);
-                _nLogAdapter.LogInfo($"accountId:{accountId} failed times:{failedCount}");
+                _logger.LogInfo($"accountId:{accountId} failed times:{failedCount}");
 
                 _notification.Notify(accountId);
                 return false;
