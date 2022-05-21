@@ -48,6 +48,19 @@ namespace DependencyInjectionWorkshop.Models
         }
     }
 
+    public class NLogAdapter
+    {
+        public NLogAdapter()
+        {
+        }
+
+        public void LogFailedCount(string accountId, int failedCount)
+        {
+            var logger = LogManager.GetCurrentClassLogger();
+            logger.Info($"accountId:{accountId} failed times:{failedCount}");
+        }
+    }
+
     public class AuthenticationService
     {
         private readonly OtpProxy _otpProxy;
@@ -55,6 +68,7 @@ namespace DependencyInjectionWorkshop.Models
         private readonly Sha256Adapter _sha256Adapter;
         private readonly SlackAdapter _slackAdapter;
         private readonly FailedCounterProxy _failedCounterProxy;
+        private readonly NLogAdapter _nLogAdapter;
 
         public AuthenticationService()
         {
@@ -63,6 +77,7 @@ namespace DependencyInjectionWorkshop.Models
             _otpProxy = new OtpProxy();
             _slackAdapter = new SlackAdapter();
             _failedCounterProxy = new FailedCounterProxy();
+            _nLogAdapter = new NLogAdapter();
         }
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
@@ -89,17 +104,11 @@ namespace DependencyInjectionWorkshop.Models
                 _failedCounterProxy.AddFailedCount(accountId, httpClient);
 
                 var failedCount = _failedCounterProxy.GetFailedCount(accountId, httpClient);
-                LogFailedCount(accountId, failedCount);
+                _nLogAdapter.LogFailedCount(accountId, failedCount);
 
                 _slackAdapter.Notify(accountId);
                 return false;
             }
-        }
-
-        private void LogFailedCount(string accountId, int failedCount)
-        {
-            var logger = LogManager.GetCurrentClassLogger();
-            logger.Info($"accountId:{accountId} failed times:{failedCount}");
         }
     }
 
