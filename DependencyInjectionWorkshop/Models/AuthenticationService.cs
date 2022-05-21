@@ -15,6 +15,16 @@ namespace DependencyInjectionWorkshop.Models
         private readonly IOtp _otp;
         private readonly IProfile _profile;
 
+        public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, INotification notification, IOtp otp, IProfile profile)
+        {
+            _failedCounter = failedCounter;
+            _hash = hash;
+            _logger = logger;
+            _notification = notification;
+            _otp = otp;
+            _profile = profile;
+        }
+
         public AuthenticationService()
         {
             _profile = new ProfileDao();
