@@ -8,7 +8,7 @@ namespace DependencyInjectionWorkshop.Models
 {
     public class AuthenticationService
     {
-        private readonly FailedCounterProxy _failedCounterProxy;
+        private readonly IFailedCounter _failedCounter;
         private readonly NLogAdapter _nLogAdapter;
         private readonly OtpProxy _otpProxy;
         private readonly ProfileDao _profileDao;
@@ -21,13 +21,13 @@ namespace DependencyInjectionWorkshop.Models
             _hash = new Sha256Adapter();
             _otpProxy = new OtpProxy();
             _notification = new SlackAdapter();
-            _failedCounterProxy = new FailedCounterProxy();
+            _failedCounter = new FailedCounterProxy();
             _nLogAdapter = new NLogAdapter();
         }
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
         {
-            var isAccountLocked = _failedCounterProxy.IsAccountLocked(accountId);
+            var isAccountLocked = _failedCounter.IsAccountLocked(accountId);
             if (isAccountLocked)
             {
                 throw new FailedTooManyTimesException() { AccountId = accountId };
@@ -39,14 +39,14 @@ namespace DependencyInjectionWorkshop.Models
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
             {
-                _failedCounterProxy.Reset(accountId);
+                _failedCounter.Reset(accountId);
                 return true;
             }
             else
             {
-                _failedCounterProxy.Add(accountId);
+                _failedCounter.Add(accountId);
 
-                var failedCount = _failedCounterProxy.Get(accountId);
+                var failedCount = _failedCounter.Get(accountId);
                 _nLogAdapter.LogInfo($"accountId:{accountId} failed times:{failedCount}");
 
                 _notification.Notify(accountId);
