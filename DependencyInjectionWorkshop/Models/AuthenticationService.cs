@@ -48,15 +48,39 @@ namespace DependencyInjectionWorkshop.Models
         }
     }
 
+    public class OtpProxy
+    {
+        public OtpProxy()
+        {
+        }
+
+        public string GetCurrentOtp(string accountId, HttpClient httpClient)
+        {
+            var response = httpClient.PostAsJsonAsync("api/otps", accountId).Result;
+            if (response.IsSuccessStatusCode)
+            {
+            }
+            else
+            {
+                throw new Exception($"web api error, accountId:{accountId}");
+            }
+
+            var currentOtp = response.Content.ReadAsAsync<string>().Result;
+            return currentOtp;
+        }
+    }
+
     public class AuthenticationService
     {
         private ProfileDao _profileDao;
         private readonly Sha256Adapter _sha256Adapter;
+        private readonly OtpProxy _otpProxy;
 
         public AuthenticationService()
         {
             _profileDao = new ProfileDao();
             _sha256Adapter = new Sha256Adapter();
+            _otpProxy = new OtpProxy();
         }
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
@@ -71,7 +95,7 @@ namespace DependencyInjectionWorkshop.Models
 
             var passwordFromDb = _profileDao.GetPasswordFromDb(accountId);
             var hashedPassword = _sha256Adapter.GetHashedPassword(inputPassword);
-            var currentOtp = GetCurrentOtp(accountId, httpClient);
+            var currentOtp = _otpProxy.GetCurrentOtp(accountId, httpClient);
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
             {
@@ -134,21 +158,6 @@ namespace DependencyInjectionWorkshop.Models
         {
             var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", accountId).Result;
             resetResponse.EnsureSuccessStatusCode();
-        }
-
-        private static string GetCurrentOtp(string accountId, HttpClient httpClient)
-        {
-            var response = httpClient.PostAsJsonAsync("api/otps", accountId).Result;
-            if (response.IsSuccessStatusCode)
-            {
-            }
-            else
-            {
-                throw new Exception($"web api error, accountId:{accountId}");
-            }
-
-            var currentOtp = response.Content.ReadAsAsync<string>().Result;
-            return currentOtp;
         }
     }
 
