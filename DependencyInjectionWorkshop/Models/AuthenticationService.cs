@@ -20,7 +20,8 @@ namespace DependencyInjectionWorkshop.Models
         private readonly IProfile _profile;
         // private readonly FailedCounterDecorator _failedCounterDecorator;
 
-        public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, IOtp otp, IProfile profile)
+        public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, IOtp otp,
+                                     IProfile profile)
         {
             // _failedCounterDecorator = new FailedCounterDecorator(this);
             _failedCounter = failedCounter;
@@ -40,6 +41,11 @@ namespace DependencyInjectionWorkshop.Models
             _logger = new NLogAdapter();
         }
 
+        public IFailedCounter FailedCounter
+        {
+            get { return _failedCounter; }
+        }
+
         public bool Verify(string accountId, string inputPassword, string inputOtp)
         {
             // _failedCounterDecorator.CheckAccountLocked(accountId);
@@ -50,7 +56,7 @@ namespace DependencyInjectionWorkshop.Models
 
             if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
             {
-                _failedCounter.Reset(accountId);
+                // _failedCounterDecorator.ResetFailedCount(accountId, this);
                 return true;
             }
             else

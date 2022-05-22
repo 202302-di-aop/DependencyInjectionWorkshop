@@ -6,8 +6,8 @@ namespace DependencyInjectionWorkshop.Models
 {
     public class FailedCounterDecorator : IAuthentication
     {
-        private readonly IFailedCounter _failedCounter;
         private readonly IAuthentication _authentication;
+        private readonly IFailedCounter _failedCounter;
 
         public FailedCounterDecorator(IAuthentication authentication, IFailedCounter failedCounter)
         {
@@ -18,7 +18,13 @@ namespace DependencyInjectionWorkshop.Models
         public bool Verify(string accountId, string inputPassword, string inputOtp)
         {
             CheckAccountLocked(accountId);
-            return _authentication.Verify(accountId, inputPassword, inputOtp);
+            var isValid = _authentication.Verify(accountId, inputPassword, inputOtp);
+            if (isValid)
+            {
+                ResetFailedCount(accountId);
+            }
+
+            return isValid;
         }
 
         private void CheckAccountLocked(string accountId)
@@ -28,6 +34,11 @@ namespace DependencyInjectionWorkshop.Models
             {
                 throw new FailedTooManyTimesException() { AccountId = accountId };
             }
+        }
+
+        private void ResetFailedCount(string accountId)
+        {
+            _failedCounter.Reset(accountId);
         }
     }
 }
