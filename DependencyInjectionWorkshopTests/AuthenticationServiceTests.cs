@@ -45,6 +45,17 @@ namespace DependencyInjectionWorkshopTests
         }
 
         [Test]
+        public void invalid()
+        {
+            GivenIsAccountLocked("joey", false);
+            GivenPasswordFromDb("joey", "hashed pw");
+            GivenHashedPassword("123", "hashed pw");
+            GivenCurrentOtp("joey", "000000");
+
+            ShouldBeInvalid("joey", "wrong password", "000000");
+        }
+
+        [Test]
         public void reset_failed_count_when_valid()
         {
             WhenValid("joey");
@@ -56,6 +67,12 @@ namespace DependencyInjectionWorkshopTests
         {
             GivenIsAccountLocked("joey", true);
             ShouldThrow<FailedTooManyTimesException>("joey");
+        }
+
+        private void ShouldBeInvalid(string accountId, string inputPassword, string inputOtp)
+        {
+            var isValid = _authenticationService.Verify(accountId, inputPassword, inputOtp);
+            Assert.AreEqual(false, isValid);
         }
 
         private void ShouldThrow<TException>(string accountId) where TException : Exception
