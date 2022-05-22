@@ -62,9 +62,11 @@ namespace DependencyInjectionWorkshopTests
             ShouldAddFailedCount("joey");
         }
 
-        private void ShouldAddFailedCount(string accountId)
+        [Test]
+        public void should_notify_user_when_invalid()
         {
-            _failedCounter.Received(1).Add(accountId);
+            WhenInvalid("joey");
+            ShouldNotify("joey");
         }
 
         [Test]
@@ -79,6 +81,16 @@ namespace DependencyInjectionWorkshopTests
         {
             GivenIsAccountLocked("joey", true);
             ShouldThrow<FailedTooManyTimesException>("joey");
+        }
+
+        private void ShouldNotify(string accountId)
+        {
+            _notification.Received(1).Notify(accountId);
+        }
+
+        private void ShouldAddFailedCount(string accountId)
+        {
+            _failedCounter.Received(1).Add(accountId);
         }
 
         private void WhenInvalid(string accountId)
