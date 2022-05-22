@@ -23,8 +23,17 @@ namespace DependencyInjectionWorkshop.Models
             {
                 ResetFailedCount(accountId);
             }
+            else
+            {
+                AddFailedCount(accountId);
+            }
 
             return isValid;
+        }
+
+        private void AddFailedCount(string accountId)
+        {
+            _failedCounter.Add(accountId);
         }
 
         private void CheckAccountLocked(string accountId)
