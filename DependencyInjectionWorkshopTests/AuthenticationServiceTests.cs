@@ -56,6 +56,18 @@ namespace DependencyInjectionWorkshopTests
         }
 
         [Test]
+        public void should_add_failed_count_when_invalid()
+        {
+            WhenInvalid("joey");
+            ShouldAddFailedCount("joey");
+        }
+
+        private void ShouldAddFailedCount(string accountId)
+        {
+            _failedCounter.Received(1).Add(accountId);
+        }
+
+        [Test]
         public void reset_failed_count_when_valid()
         {
             WhenValid("joey");
@@ -67,6 +79,16 @@ namespace DependencyInjectionWorkshopTests
         {
             GivenIsAccountLocked("joey", true);
             ShouldThrow<FailedTooManyTimesException>("joey");
+        }
+
+        private void WhenInvalid(string accountId)
+        {
+            GivenIsAccountLocked(accountId, false);
+            GivenPasswordFromDb(accountId, "hashed pw");
+            GivenHashedPassword("123", "hashed pw");
+            GivenCurrentOtp(accountId, "000000");
+
+            _authenticationService.Verify(accountId, "wrong password", "000000");
         }
 
         private void ShouldBeInvalid(string accountId, string inputPassword, string inputOtp)
