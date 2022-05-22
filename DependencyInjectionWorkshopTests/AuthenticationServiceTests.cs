@@ -12,7 +12,7 @@ namespace DependencyInjectionWorkshopTests
     [TestFixture]
     public class AuthenticationServiceTests
     {
-        private AuthenticationService _authenticationService;
+        private IAuthentication _authentication;
         private IFailedCounter _failedCounter;
         private IHash _hash;
         private ILogger _logger;
@@ -29,8 +29,8 @@ namespace DependencyInjectionWorkshopTests
             _notification = Substitute.For<INotification>();
             _otp = Substitute.For<IOtp>();
             _profile = Substitute.For<IProfile>();
-            _authenticationService =
-                new AuthenticationService(_failedCounter, _hash, _logger, _notification, _otp, _profile);
+            _authentication = new AuthenticationService(_failedCounter, _hash, _logger, _otp, _profile);
+            _authentication = new NotificationDecorator(_authentication, _notification);
         }
 
         [Test]
@@ -118,18 +118,18 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedPassword("123", "hashed pw");
             GivenCurrentOtp(accountId, "000000");
 
-            _authenticationService.Verify(accountId, "wrong password", "000000");
+            _authentication.Verify(accountId, "wrong password", "000000");
         }
 
         private void ShouldBeInvalid(string accountId, string inputPassword, string inputOtp)
         {
-            var isValid = _authenticationService.Verify(accountId, inputPassword, inputOtp);
+            var isValid = _authentication.Verify(accountId, inputPassword, inputOtp);
             Assert.AreEqual(false, isValid);
         }
 
         private void ShouldThrow<TException>(string accountId) where TException : Exception
         {
-            void LockedVerify() => _authenticationService.Verify(accountId, "123", "000000");
+            void LockedVerify() => _authentication.Verify(accountId, "123", "000000");
             Assert.Throws<TException>(LockedVerify);
         }
 
@@ -145,12 +145,12 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedPassword("123", "hashed pw");
             GivenCurrentOtp(accountId, "000000");
 
-            _authenticationService.Verify(accountId, "123", "000000");
+            _authentication.Verify(accountId, "123", "000000");
         }
 
         private void ShouldBeValid(string accountId, string inputPassword, string inputOtp)
         {
-            var isValid = _authenticationService.Verify(accountId, inputPassword, inputOtp);
+            var isValid = _authentication.Verify(accountId, inputPassword, inputOtp);
             Assert.AreEqual(true, isValid);
         }
 
