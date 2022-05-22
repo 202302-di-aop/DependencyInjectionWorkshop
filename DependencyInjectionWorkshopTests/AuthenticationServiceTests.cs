@@ -30,7 +30,9 @@ namespace DependencyInjectionWorkshopTests
             _otp = Substitute.For<IOtp>();
             _profile = Substitute.For<IProfile>();
             _authentication = new AuthenticationService(_failedCounter, _hash, _logger, _otp, _profile);
+            _authentication = new FailedCounterDecorator(_authentication, _failedCounter);
             _authentication = new NotificationDecorator(_authentication, _notification);
+            
         }
 
         [Test]
@@ -80,8 +82,15 @@ namespace DependencyInjectionWorkshopTests
         public void log_latest_failed_count_when_invalid()
         {
             GivenLatestFailedCount("joey", 5);
-            WhenInvalid("joey"); 
+            WhenInvalid("joey");
             ShouldLog("joey", "5");
+        }
+
+        [Test]
+        public void account_is_locked()
+        {
+            GivenIsAccountLocked("joey", true);
+            ShouldThrow<FailedTooManyTimesException>("joey");
         }
 
         private void ShouldLog(string accountId, string failedCount)
@@ -92,13 +101,6 @@ namespace DependencyInjectionWorkshopTests
         private void GivenLatestFailedCount(string accountId, int failedCount)
         {
             _failedCounter.Get(accountId).Returns(failedCount);
-        }
-
-        [Test]
-        public void account_is_locked()
-        {
-            GivenIsAccountLocked("joey", true);
-            ShouldThrow<FailedTooManyTimesException>("joey");
         }
 
         private void ShouldNotify(string accountId)
