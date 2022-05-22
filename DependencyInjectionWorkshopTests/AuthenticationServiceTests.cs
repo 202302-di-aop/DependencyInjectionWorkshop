@@ -1,5 +1,6 @@
 ﻿#region
 
+using System;
 using DependencyInjectionWorkshop.Models;
 using NSubstitute;
 using NUnit.Framework;
@@ -41,15 +42,26 @@ namespace DependencyInjectionWorkshopTests
             GivenCurrentOtp("joey", "000000");
 
             ShouldBeValid("joey", "123", "000000");
-
-            // _failedCounter.Received(1).Reset("joey");
         }
 
         [Test]
         public void reset_failed_count_when_valid()
         {
-            WhenValid("joey"); 
+            WhenValid("joey");
             ShouldResetFailedCount("joey");
+        }
+
+        [Test]
+        public void account_is_locked()
+        {
+            GivenIsAccountLocked("joey", true);
+            ShouldThrow<FailedTooManyTimesException>("joey");
+        }
+
+        private void ShouldThrow<TException>(string accountId) where TException : Exception
+        {
+            void LockedVerify() => _authenticationService.Verify(accountId, "123", "000000");
+            Assert.Throws<TException>(LockedVerify);
         }
 
         private void ShouldResetFailedCount(string accountId)
@@ -78,9 +90,9 @@ namespace DependencyInjectionWorkshopTests
             _otp.GetCurrentOtp(accountId).Returns(currentOtp);
         }
 
-        private void GivenHashedPassword(string inputPassword, string hashedResult)
+        private void GivenHashedPassword(string inputPassword, string hashedPassword)
         {
-            _hash.Compute(inputPassword).Returns("hashed pw");
+            _hash.Compute(inputPassword).Returns(hashedPassword);
         }
 
         private void GivenPasswordFromDb(string accountId, string password)
