@@ -6,7 +6,12 @@ using System;
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class AuthenticationService
+    public interface IAuthentication
+    {
+        bool Verify(string accountId, string inputPassword, string inputOtp);
+    }
+
+    public class AuthenticationService : IAuthentication
     {
         private readonly IFailedCounter _failedCounter;
         private readonly IHash _hash;
@@ -60,9 +65,14 @@ namespace DependencyInjectionWorkshop.Models
                 var failedCount = _failedCounter.Get(accountId);
                 _logger.LogInfo($"accountId:{accountId} failed times:{failedCount}");
 
-                _notification.Notify(accountId);
+                NotifyUserWhenInvalid(accountId);
                 return false;
             }
+        }
+
+        private void NotifyUserWhenInvalid(string accountId)
+        {
+            _notification.Notify(accountId);
         }
     }
 
