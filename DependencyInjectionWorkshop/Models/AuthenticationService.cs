@@ -13,18 +13,13 @@ namespace DependencyInjectionWorkshop.Models
 
     public class AuthenticationService : IAuthentication
     {
-        private readonly IFailedCounter _failedCounter;
         private readonly IHash _hash;
-        private readonly ILogger _logger;
         private readonly IOtp _otp;
         private readonly IProfile _profile;
 
-        public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, IOtp otp,
-                                     IProfile profile)
+        public AuthenticationService(IProfile profile, IHash hash, IOtp otp)
         {
-            _failedCounter = failedCounter;
             _hash = hash;
-            _logger = logger;
             _otp = otp;
             _profile = profile;
         }
@@ -34,8 +29,6 @@ namespace DependencyInjectionWorkshop.Models
             _profile = new ProfileDao();
             _hash = new Sha256Adapter();
             _otp = new OtpProxy();
-            _failedCounter = new FailedCounterProxy();
-            _logger = new NLogAdapter();
         }
 
         public bool Verify(string accountId, string inputPassword, string inputOtp)
@@ -44,17 +37,7 @@ namespace DependencyInjectionWorkshop.Models
             var hashedPassword = _hash.Compute(inputPassword);
             var currentOtp = _otp.GetCurrentOtp(accountId);
 
-            if (passwordFromDb == hashedPassword && inputOtp == currentOtp)
-            {
-                return true;
-            }
-            else
-            {
-                var failedCount = _failedCounter.Get(accountId);
-                _logger.LogInfo($"accountId:{accountId} failed times:{failedCount}");
-
-                return false;
-            }
+            return passwordFromDb == hashedPassword && inputOtp == currentOtp;
         }
     }
 
