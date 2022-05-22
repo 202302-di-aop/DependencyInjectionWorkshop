@@ -77,6 +77,24 @@ namespace DependencyInjectionWorkshopTests
         }
 
         [Test]
+        public void log_latest_failed_count_when_invalid()
+        {
+            GivenLatestFailedCount("joey", 5);
+            WhenInvalid("joey"); 
+            ShouldLog("joey", "5");
+        }
+
+        private void ShouldLog(string accountId, string failedCount)
+        {
+            _logger.Received().LogInfo(Arg.Is<string>(s => s.Contains(accountId) && s.Contains(failedCount)));
+        }
+
+        private void GivenLatestFailedCount(string accountId, int failedCount)
+        {
+            _failedCounter.Get(accountId).Returns(failedCount);
+        }
+
+        [Test]
         public void account_is_locked()
         {
             GivenIsAccountLocked("joey", true);
