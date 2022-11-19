@@ -1,13 +1,9 @@
 ﻿#region
 
 using System;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using Dapper;
 using SlackAPI;
 
 #endregion
@@ -16,6 +12,13 @@ namespace DependencyInjectionWorkshop.Models
 {
     public class AuthenticationService
     {
+        private readonly ProfileRepo _profileRepo;
+
+        public AuthenticationService()
+        {
+            _profileRepo = new ProfileRepo();
+        }
+
         public bool IsValid(string account, string password, string otp)
         {
             var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
@@ -25,19 +28,19 @@ namespace DependencyInjectionWorkshop.Models
                 throw new FailedTooManyTimesException() { Account = account };
             }
 
-            var passwordFromDb = GetPasswordFromDb(account); 
-            var hashedPassword = GetHashedPassword(password); 
+            var passwordFromDb = _profileRepo.GetPasswordFromDb(account);
+            var hashedPassword = GetHashedPassword(password);
             var currentOtp = GetCurrentOtp(account, httpClient);
-            
+
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                ResetFailCount(account, httpClient); 
+                ResetFailCount(account, httpClient);
                 return true;
             }
             else
             {
-                AddFailedCount(account, httpClient); 
-                LogCurrentFailedCount(account, httpClient); 
+                AddFailedCount(account, httpClient);
+                LogCurrentFailedCount(account, httpClient);
                 Notify(account);
                 return false;
             }
@@ -98,17 +101,6 @@ namespace DependencyInjectionWorkshop.Models
 
             var hashedPassword = hash.ToString();
             return hashedPassword;
-        }
-
-        private static string GetPasswordFromDb(string account)
-        {
-            using (var connection = new SqlConnection("my connection string"))
-            {
-                return connection.Query<string>("spGetUserPassword", new { Id = account },
-                                                          commandType: CommandType.StoredProcedure)
-                                           .SingleOrDefault();
-            }
-
         }
 
         private static bool IsLocked(string account, HttpClient httpClient)
