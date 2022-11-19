@@ -6,7 +6,12 @@ using System;
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class AuthenticationService
+    public interface IAuthentication
+    {
+        bool IsValid(string account, string password, string otp);
+    }
+
+    public class AuthenticationService : IAuthentication
     {
         private readonly IFailedCounter _failedCounter;
         private readonly IHash _hash;
@@ -58,9 +63,14 @@ namespace DependencyInjectionWorkshop.Models
 
                 LogCurrentFailedCount(account);
 
-                _notification.Notify(account, $"account:{account} try to login failed");
+                NotifyForDecorator(account);
                 return false;
             }
+        }
+
+        private void NotifyForDecorator(string account)
+        {
+            _notification.Notify(account, $"account:{account} try to login failed");
         }
 
         private void LogCurrentFailedCount(string account)
