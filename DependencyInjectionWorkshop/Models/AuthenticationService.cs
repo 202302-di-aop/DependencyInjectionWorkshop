@@ -1,7 +1,6 @@
 ﻿#region
 
 using System;
-using System.Net.Http;
 
 #endregion
 
@@ -16,15 +15,15 @@ namespace DependencyInjectionWorkshop.Models
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
 
-        public AuthenticationService()
-        {
-            _profileRepo = new ProfileRepo();
-            _hash = new Sha256Adapter();
-            _otp = new OtpAdapter();
-            _notification = new SlackAdapter();
-            _failedCounter = new FailedCounter();
-            _logger = new NLogAdapter();
-        }
+        // public AuthenticationService()
+        // {
+        //     _profileRepo = new ProfileRepo();
+        //     _hash = new Sha256Adapter();
+        //     _otp = new OtpAdapter();
+        //     _notification = new SlackAdapter();
+        //     _failedCounter = new FailedCounter();
+        //     _logger = new NLogAdapter();
+        // }
 
         public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, INotification notification, IOtp otp, IProfileRepo profileRepo)
         {
@@ -38,8 +37,7 @@ namespace DependencyInjectionWorkshop.Models
 
         public bool IsValid(string account, string password, string otp)
         {
-            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
-            var isLocked = _failedCounter.IsLocked(account, httpClient);
+            var isLocked = _failedCounter.IsLocked(account);
             if (isLocked)
             {
                 throw new FailedTooManyTimesException() { Account = account };
@@ -47,27 +45,27 @@ namespace DependencyInjectionWorkshop.Models
 
             var passwordFromDb = _profileRepo.GetPassword(account);
             var hashedPassword = _hash.GetHashedResult(password);
-            var currentOtp = _otp.GetCurrentOtp(account, httpClient);
+            var currentOtp = _otp.GetCurrentOtp(account);
 
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                _failedCounter.Reset(account, httpClient);
+                _failedCounter.Reset(account);
                 return true;
             }
             else
             {
-                _failedCounter.Add(account, httpClient);
+                _failedCounter.Add(account);
 
-                LogCurrentFailedCount(account, httpClient);
+                LogCurrentFailedCount(account);
 
                 _notification.Notify(account, $"account:{account} try to login failed");
                 return false;
             }
         }
 
-        private void LogCurrentFailedCount(string account, HttpClient httpClient)
+        private void LogCurrentFailedCount(string account)
         {
-            var failedCount = _failedCounter.GetFailedCount(account, httpClient);
+            var failedCount = _failedCounter.GetFailedCount(account);
             _logger.LogInfo($"accountId:{account} failed times:{failedCount}");
         }
     }
