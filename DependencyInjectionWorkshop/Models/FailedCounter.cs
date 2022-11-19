@@ -2,7 +2,15 @@
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class FailedCounter
+    public interface IFailedCounter
+    {
+        void Add(string account, HttpClient httpClient);
+        void Reset(string account, HttpClient httpClient);
+        bool IsLocked(string account, HttpClient httpClient);
+        int GetFailedCount(string account, HttpClient httpClient);
+    }
+
+    public class FailedCounter : IFailedCounter
     {
         public FailedCounter()
         {

@@ -3,7 +3,12 @@ using System.Net.Http;
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class OtpAdapter
+    public interface IOtp
+    {
+        string GetCurrentOtp(string account, HttpClient httpClient);
+    }
+
+    public class OtpAdapter : IOtp
     {
         public OtpAdapter()
         {

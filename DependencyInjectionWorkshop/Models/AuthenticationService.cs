@@ -9,21 +9,21 @@ namespace DependencyInjectionWorkshop.Models
 {
     public class AuthenticationService
     {
-        private readonly ProfileRepo _profileRepo;
-        private readonly Sha256Adapter _sha256Adapter;
-        private readonly OtpAdapter _otpAdapter;
-        private readonly SlackAdapter _slackAdapter;
-        private readonly FailedCounter _failedCounter;
-        private readonly NLogAdapter _nLogAdapter;
+        private readonly IFailedCounter _failedCounter;
+        private readonly IHash _hash;
+        private readonly ILogger _logger;
+        private readonly INotification _notification;
+        private readonly IOtp _otp;
+        private readonly IProfileRepo _profileRepo;
 
         public AuthenticationService()
         {
             _profileRepo = new ProfileRepo();
-            _sha256Adapter = new Sha256Adapter();
-            _otpAdapter = new OtpAdapter();
-            _slackAdapter = new SlackAdapter();
+            _hash = new Sha256Adapter();
+            _otp = new OtpAdapter();
+            _notification = new SlackAdapter();
             _failedCounter = new FailedCounter();
-            _nLogAdapter = new NLogAdapter();
+            _logger = new NLogAdapter();
         }
 
         public bool IsValid(string account, string password, string otp)
@@ -36,8 +36,8 @@ namespace DependencyInjectionWorkshop.Models
             }
 
             var passwordFromDb = _profileRepo.GetPassword(account);
-            var hashedPassword = _sha256Adapter.GetHashedResult(password);
-            var currentOtp = _otpAdapter.GetCurrentOtp(account, httpClient);
+            var hashedPassword = _hash.GetHashedResult(password);
+            var currentOtp = _otp.GetCurrentOtp(account, httpClient);
 
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
@@ -47,10 +47,10 @@ namespace DependencyInjectionWorkshop.Models
             else
             {
                 _failedCounter.Add(account, httpClient);
-                
+
                 LogCurrentFailedCount(account, httpClient);
 
-                _slackAdapter.Notify(account, $"account:{account} try to login failed");
+                _notification.Notify(account, $"account:{account} try to login failed");
                 return false;
             }
         }
@@ -58,7 +58,7 @@ namespace DependencyInjectionWorkshop.Models
         private void LogCurrentFailedCount(string account, HttpClient httpClient)
         {
             var failedCount = _failedCounter.GetFailedCount(account, httpClient);
-            _nLogAdapter.LogInfo($"accountId:{account} failed times:{failedCount}");
+            _logger.LogInfo($"accountId:{account} failed times:{failedCount}");
         }
     }
 
