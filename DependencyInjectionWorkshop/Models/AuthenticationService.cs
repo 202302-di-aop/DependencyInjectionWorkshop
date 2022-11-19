@@ -1,8 +1,10 @@
 ﻿#region
 
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using Dapper;
@@ -13,7 +15,7 @@ namespace DependencyInjectionWorkshop.Models
 {
     public class AuthenticationService
     {
-        public bool IsValid(string account, string password)
+        public bool IsValid(string account, string password, string otp)
         {
             string passwordFromDb;
             using (var connection = new SqlConnection("my connection string"))
@@ -33,7 +35,15 @@ namespace DependencyInjectionWorkshop.Models
 
             var hashedPassword = hash.ToString();
 
-            if (passwordFromDb == hashedPassword)
+            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
+            var response = httpClient.PostAsJsonAsync("api/otps", account).Result;
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"web api error, accountId:{account}");
+            }
+
+            var currentOtp = response.Content.ReadAsAsync<string>().Result;
+            if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
                 return true;
             }
