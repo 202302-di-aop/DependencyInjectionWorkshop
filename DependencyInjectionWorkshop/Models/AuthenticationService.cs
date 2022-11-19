@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using Dapper;
+using SlackAPI;
 
 #endregion
 
@@ -47,8 +48,13 @@ namespace DependencyInjectionWorkshop.Models
             {
                 return true;
             }
-
-            return false;
+            else
+            {
+                string message = $"account:{account} try to login failed";
+                var slackClient = new SlackClient("my api token");
+                slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
+                return false;
+            }
         }
     }
 }
