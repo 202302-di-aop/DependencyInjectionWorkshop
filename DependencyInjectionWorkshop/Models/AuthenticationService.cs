@@ -66,7 +66,7 @@ namespace DependencyInjectionWorkshop.Models
         private void LogCurrentFailedCount(string account)
         {
             var failedCount = _failedCounter.GetFailedCount(account);
-            _logger.LogInfo($"accountId:{account} failed times:{failedCount}");
+            _logger.LogInfo($"accountId:{account} failed times:{failedCount}.");
         }
     }
 

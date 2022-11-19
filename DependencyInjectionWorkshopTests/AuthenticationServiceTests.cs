@@ -1,5 +1,6 @@
 ﻿#region
 
+using System;
 using DependencyInjectionWorkshop.Models;
 using NSubstitute;
 using NUnit.Framework;
@@ -45,9 +46,121 @@ namespace DependencyInjectionWorkshopTests
             ShouldBeValid(isValid);
         }
 
+        [Test]
+        public void should_reset_failed_count_when_valid()
+        {
+            WhenValid("joey");
+            ShouldResetFailedCount("joey");
+        }
+
+        [Test]
+        public void Invalid()
+        {
+            GivenAccountIsLocked(false);
+            GivenPasswordFromRepo("joey", "hashed password");
+            GivenHashedResult("hello", "wrong password");
+            GivenCurrentOtp("joey", "123_456_joey_hello_world");
+
+            var isValid = _authenticationService.IsValid("joey",
+                                                         "hello",
+                                                         "123_456_joey_hello_world");
+            ShouldBeInvalid(isValid);
+        }
+
+        [Test]
+        public void should_add_failed_count_when_invalid()
+        {
+            WhenInvalid("joey");
+            ShouldAddFailedCount("joey");
+        }
+
+        [Test]
+        public void should_notify_user_when_invalid()
+        {
+            WhenInvalid("joey");
+            ShouldNotifyUser("joey");
+        }
+
+        [Test]
+        public void should_log_current_failed_count_when_invalid()
+        {
+            GivenCurrentFailedCount(3);
+            WhenInvalid("joey"); 
+            ShouldLog("times:3.");
+        }
+
+        [Test]
+        public void account_is_locked()
+        {
+            GivenAccountIsLocked(true);
+            ShouldThrow<FailedTooManyTimesException>(() => _authenticationService.IsValid("joey", "hello", "123_456_joey_hello_world"));
+        }
+
+        private static void ShouldBeInvalid(bool isValid)
+        {
+            Assert.AreEqual(false, isValid);
+        }
+
         private static void ShouldBeValid(bool isValid)
         {
             Assert.AreEqual(true, isValid);
+        }
+
+        private void ShouldLog(string containContent)
+        {
+            _logger.Received(1).LogInfo(Arg.Is<string>(s => s.Contains(containContent)));
+        }
+
+        private void GivenCurrentFailedCount(int failedCount)
+        {
+            _failedCounter.GetFailedCount("joey").Returns(failedCount);
+        }
+
+        private void ShouldNotifyUser(string account)
+        {
+            _notification
+                .Received(1)
+                .Notify(account,
+                        Arg.Is<string>(s => s.Contains(account) && s.Contains("login failed")));
+        }
+
+        private void ShouldAddFailedCount(string account)
+        {
+            _failedCounter.Received(1).Add(account);
+        }
+
+        private void WhenInvalid(string account)
+        {
+            GivenAccountIsLocked(false);
+            GivenPasswordFromRepo(account, "hashed password");
+            GivenHashedResult("hello", "wrong password");
+            GivenCurrentOtp(account, "123_456_joey_hello_world");
+
+            _authenticationService.IsValid(account,
+                                           "hello",
+                                           "123_456_joey_hello_world");
+        }
+
+        private void ShouldResetFailedCount(string account)
+        {
+            _failedCounter.Received(1).Reset(account);
+        }
+
+        private void WhenValid(string account)
+        {
+            GivenAccountIsLocked(false);
+            GivenPasswordFromRepo(account, "hashed password");
+            GivenHashedResult("hello", "hashed password");
+            GivenCurrentOtp(account, "123_456_joey_hello_world");
+
+            _authenticationService.IsValid(account,
+                                           "hello",
+                                           "123_456_joey_hello_world");
+        }
+
+        private void ShouldThrow<TException>(TestDelegate action) where TException : Exception
+        {
+            Assert.Throws<TException>(action);
         }
 
         private void GivenCurrentOtp(string account, string otp)
