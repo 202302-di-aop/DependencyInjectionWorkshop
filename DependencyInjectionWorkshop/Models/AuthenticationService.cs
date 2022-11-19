@@ -11,14 +11,43 @@ namespace DependencyInjectionWorkshop.Models
         bool IsValid(string account, string password, string otp);
     }
 
+    public class NotificationDecorator : IAuthentication
+    {
+        private readonly IAuthentication _authentication;
+        private readonly INotification _notification;
+
+        public NotificationDecorator(INotification notification, IAuthentication authentication)
+        {
+            _notification = notification;
+            _authentication = authentication;
+        }
+
+        public bool IsValid(string account, string password, string otp)
+        {
+            var isValid = _authentication.IsValid(account, password, otp);
+            if (!isValid)
+            {
+                Notify(account);
+            }
+
+            return isValid;
+        }
+
+        private void Notify(string account)
+        {
+            _notification.Notify(account, $"account:{account} try to login failed");
+        }
+    }
+
     public class AuthenticationService : IAuthentication
     {
         private readonly IFailedCounter _failedCounter;
         private readonly IHash _hash;
         private readonly ILogger _logger;
-        private readonly INotification _notification;
+        // private readonly INotification _notification;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
+        // private readonly NotificationDecorator _notificationDecorator;
 
         // public AuthenticationService()
         // {
@@ -30,14 +59,15 @@ namespace DependencyInjectionWorkshop.Models
         //     _logger = new NLogAdapter();
         // }
 
-        public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, INotification notification, IOtp otp, IProfileRepo profileRepo)
+        public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, IOtp otp, IProfileRepo profileRepo)
         {
             _failedCounter = failedCounter;
             _hash = hash;
             _logger = logger;
-            _notification = notification;
+            // _notification = notification;
             _otp = otp;
             _profileRepo = profileRepo;
+            // _notificationDecorator = new NotificationDecorator();
         }
 
         public bool IsValid(string account, string password, string otp)
@@ -63,14 +93,9 @@ namespace DependencyInjectionWorkshop.Models
 
                 LogCurrentFailedCount(account);
 
-                NotifyForDecorator(account);
+                // _notificationDecorator.NotifyForDecorator(account);
                 return false;
             }
-        }
-
-        private void NotifyForDecorator(string account)
-        {
-            _notification.Notify(account, $"account:{account} try to login failed");
         }
 
         private void LogCurrentFailedCount(string account)

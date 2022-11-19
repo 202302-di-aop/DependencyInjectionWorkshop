@@ -12,7 +12,7 @@ namespace DependencyInjectionWorkshopTests
     [TestFixture]
     public class AuthenticationServiceTests
     {
-        private AuthenticationService _authenticationService;
+        private IAuthentication _authentication;
         private IFailedCounter _failedCounter;
         private IHash _hash;
         private ILogger _logger;
@@ -29,7 +29,9 @@ namespace DependencyInjectionWorkshopTests
             _notification = Substitute.For<INotification>();
             _otp = Substitute.For<IOtp>();
             _profileRepo = Substitute.For<IProfileRepo>();
-            _authenticationService = new AuthenticationService(_failedCounter, _hash, _logger, _notification, _otp, _profileRepo);
+            _authentication = new AuthenticationService(_failedCounter, _hash, _logger, _otp, _profileRepo);
+
+            _authentication = new NotificationDecorator(_notification, _authentication);
         }
 
         [Test]
@@ -40,9 +42,9 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("hello", "hashed password");
             GivenCurrentOtp("joey", "123_456_joey_hello_world");
 
-            var isValid = _authenticationService.IsValid("joey",
-                                                         "hello",
-                                                         "123_456_joey_hello_world");
+            var isValid = _authentication.IsValid("joey",
+                                                  "hello",
+                                                  "123_456_joey_hello_world");
             ShouldBeValid(isValid);
         }
 
@@ -61,9 +63,9 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("hello", "wrong password");
             GivenCurrentOtp("joey", "123_456_joey_hello_world");
 
-            var isValid = _authenticationService.IsValid("joey",
-                                                         "hello",
-                                                         "123_456_joey_hello_world");
+            var isValid = _authentication.IsValid("joey",
+                                                  "hello",
+                                                  "123_456_joey_hello_world");
             ShouldBeInvalid(isValid);
         }
 
@@ -93,7 +95,7 @@ namespace DependencyInjectionWorkshopTests
         public void account_is_locked()
         {
             GivenAccountIsLocked("joey", true);
-            ShouldThrow<FailedTooManyTimesException>(() => _authenticationService.IsValid("joey", "hello", "123_456_joey_hello_world"));
+            ShouldThrow<FailedTooManyTimesException>(() => _authentication.IsValid("joey", "hello", "123_456_joey_hello_world"));
         }
 
         private static void ShouldBeInvalid(bool isValid)
@@ -136,9 +138,9 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("hello", "wrong password");
             GivenCurrentOtp(account, "123_456_joey_hello_world");
 
-            _authenticationService.IsValid(account,
-                                           "hello",
-                                           "123_456_joey_hello_world");
+            _authentication.IsValid(account,
+                                    "hello",
+                                    "123_456_joey_hello_world");
         }
 
         private void ShouldResetFailedCount(string account)
@@ -153,9 +155,9 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("hello", "hashed password");
             GivenCurrentOtp(account, "123_456_joey_hello_world");
 
-            _authenticationService.IsValid(account,
-                                           "hello",
-                                           "123_456_joey_hello_world");
+            _authentication.IsValid(account,
+                                    "hello",
+                                    "123_456_joey_hello_world");
         }
 
         private void ShouldThrow<TException>(TestDelegate action) where TException : Exception
