@@ -16,39 +16,23 @@ namespace DependencyInjectionWorkshop.Models
         private readonly IFailedCounter _failedCounter;
         private readonly IHash _hash;
         private readonly ILogger _logger;
-        // private readonly INotification _notification;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
-        // private readonly NotificationDecorator _notificationDecorator;
-
-        // public AuthenticationService()
-        // {
-        //     _profileRepo = new ProfileRepo();
-        //     _hash = new Sha256Adapter();
-        //     _otp = new OtpAdapter();
-        //     _notification = new SlackAdapter();
-        //     _failedCounter = new FailedCounter();
-        //     _logger = new NLogAdapter();
-        // }
+        private readonly FailedCounterDecorator _failedCounterDecorator;
 
         public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, IOtp otp, IProfileRepo profileRepo)
         {
             _failedCounter = failedCounter;
             _hash = hash;
             _logger = logger;
-            // _notification = notification;
             _otp = otp;
             _profileRepo = profileRepo;
-            // _notificationDecorator = new NotificationDecorator();
+            // _failedCounterDecorator = new FailedCounterDecorator(this);
         }
 
         public bool IsValid(string account, string password, string otp)
         {
-            var isLocked = _failedCounter.IsLocked(account);
-            if (isLocked)
-            {
-                throw new FailedTooManyTimesException() { Account = account };
-            }
+            // _failedCounterDecorator.CheckAccountIsLocked(account);
 
             var passwordFromDb = _profileRepo.GetPassword(account);
             var hashedPassword = _hash.GetHashedResult(password);
