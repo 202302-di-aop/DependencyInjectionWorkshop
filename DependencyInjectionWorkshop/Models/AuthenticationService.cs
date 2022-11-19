@@ -26,6 +26,16 @@ namespace DependencyInjectionWorkshop.Models
             _logger = new NLogAdapter();
         }
 
+        public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, INotification notification, IOtp otp, IProfileRepo profileRepo)
+        {
+            _failedCounter = failedCounter;
+            _hash = hash;
+            _logger = logger;
+            _notification = notification;
+            _otp = otp;
+            _profileRepo = profileRepo;
+        }
+
         public bool IsValid(string account, string password, string otp)
         {
             var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
