@@ -1,17 +1,16 @@
 ﻿namespace DependencyInjectionWorkshop.Models
 {
-    public class FailedCounterDecorator : IAuthentication
+    public class FailedCounterDecorator : AuthenticationDecoratorBase
     {
-        private readonly IAuthentication _authentication;
         private readonly IFailedCounter _failedCounter;
 
-        public FailedCounterDecorator(IFailedCounter failedCounter, IAuthentication authentication)
+        public FailedCounterDecorator(IFailedCounter failedCounter, IAuthentication authentication) : base(authentication)
         {
             _failedCounter = failedCounter;
             _authentication = authentication;
         }
 
-        public bool IsValid(string account, string password, string otp)
+        public override bool IsValid(string account, string password, string otp)
         {
             CheckAccountIsLocked(account);
             var isValid = _authentication.IsValid(account, password, otp);
