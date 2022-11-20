@@ -18,7 +18,6 @@ namespace DependencyInjectionWorkshop.Models
         private readonly ILogger _logger;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
-        private readonly FailedCounterDecorator _failedCounterDecorator;
 
         public AuthenticationService(IFailedCounter failedCounter, IHash hash, ILogger logger, IOtp otp, IProfileRepo profileRepo)
         {
@@ -27,20 +26,17 @@ namespace DependencyInjectionWorkshop.Models
             _logger = logger;
             _otp = otp;
             _profileRepo = profileRepo;
-            // _failedCounterDecorator = new FailedCounterDecorator(this);
         }
 
         public bool IsValid(string account, string password, string otp)
         {
-            // _failedCounterDecorator.CheckAccountIsLocked(account);
-
             var passwordFromDb = _profileRepo.GetPassword(account);
             var hashedPassword = _hash.GetHashedResult(password);
             var currentOtp = _otp.GetCurrentOtp(account);
 
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                _failedCounter.Reset(account);
+                // FailedCounterDecorator.ResetFailedCount(account, _failedCounter);
                 return true;
             }
             else
@@ -49,7 +45,6 @@ namespace DependencyInjectionWorkshop.Models
 
                 LogCurrentFailedCount(account);
 
-                // _notificationDecorator.NotifyForDecorator(account);
                 return false;
             }
         }

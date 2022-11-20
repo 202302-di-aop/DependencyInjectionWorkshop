@@ -14,7 +14,13 @@
         public bool IsValid(string account, string password, string otp)
         {
             CheckAccountIsLocked(account);
-            return _authentication.IsValid(account, password, otp);
+            var isValid = _authentication.IsValid(account, password, otp);
+            if (isValid)
+            {
+                _failedCounter.Reset(account);
+            }
+
+            return isValid;
         }
 
         private void CheckAccountIsLocked(string account)
