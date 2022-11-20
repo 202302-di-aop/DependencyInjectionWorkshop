@@ -8,6 +8,7 @@ namespace DependencyInjectionWorkshop.Models
         void Notify(string account, string message);
     }
 
+
     public class SlackAdapter : INotification
     {
         public SlackAdapter()
