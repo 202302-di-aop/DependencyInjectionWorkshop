@@ -31,9 +31,22 @@ namespace DependencyInjectionWorkshopTests
             _profileRepo = Substitute.For<IProfileRepo>();
             _authentication = new AuthenticationService(_failedCounter, _hash, _logger, _otp, _profileRepo);
 
-            _authentication = new NotificationDecorator(_notification, _authentication);
             _authentication = new FailedCounterDecorator(_failedCounter, _authentication);
             _authentication = new LogDecorator(_authentication, _failedCounter, _logger);
+            _authentication = new NotificationDecorator(_notification, _authentication);
+        }
+
+        [Test]
+        public void check_decorator_order_when_invalid()
+        {
+            WhenInvalid("joey");
+
+            Received.InOrder(() =>
+            {
+                _failedCounter.Add("joey");
+                _logger.LogInfo(Arg.Is<string>(m => m.Contains("joey")));
+                _notification.Notify("joey", Arg.Any<string>());
+            });
         }
 
         [Test]
