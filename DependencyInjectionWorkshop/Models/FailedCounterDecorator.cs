@@ -19,6 +19,10 @@
             {
                 _failedCounter.Reset(account);
             }
+            else
+            {
+                _failedCounter.Add(account);
+            }
 
             return isValid;
         }

@@ -36,12 +36,10 @@ namespace DependencyInjectionWorkshop.Models
 
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                // FailedCounterDecorator.ResetFailedCount(account, _failedCounter);
                 return true;
             }
             else
             {
-                _failedCounter.Add(account);
 
                 LogCurrentFailedCount(account);
 
