@@ -33,6 +33,7 @@ namespace DependencyInjectionWorkshopTests
 
             _authentication = new NotificationDecorator(_notification, _authentication);
             _authentication = new FailedCounterDecorator(_failedCounter, _authentication);
+            _authentication = new LogDecorator(_authentication, _failedCounter, _logger);
         }
 
         [Test]
