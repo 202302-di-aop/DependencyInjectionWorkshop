@@ -24,7 +24,12 @@ namespace MyConsole
         private static void RegisterContainer()
         {
             var builder = new ContainerBuilder();
-            builder.RegisterType<FakeProfile>().As<IProfileRepo>();
+            builder.RegisterType<FakeFeatureToggle>().As<IFeatureToggle>();
+            builder.RegisterType<ProfileFeatureToggle>().As<IProfileRepo>();
+            builder.RegisterType<YuanBaoProfileRepo>();
+            // builder.RegisterType<YuanBaoProfileRepo>().As<IProfileRepo>();
+            builder.RegisterType<FakeProfile>();
+            // builder.RegisterType<FakeProfile>().As<IProfileRepo>();
             builder.RegisterType<FakeOtp>().As<IOtp>();
             builder.RegisterType<FakeHash>().As<IHash>();
             builder.RegisterType<FakeLogger>().As<ILogger>();
@@ -39,6 +44,14 @@ namespace MyConsole
             builder.RegisterDecorator<NotificationDecorator, IAuthentication>();
 
             _container = builder.Build();
+        }
+    }
+
+    internal class FakeFeatureToggle : IFeatureToggle
+    {
+        public bool IsEnable(string feature)
+        {
+            return true;
         }
     }
 
@@ -102,7 +115,7 @@ namespace MyConsole
         public bool IsAccountLocked(string accountId)
         {
             Console.WriteLine($"{nameof(FakeFailedCounter)}.{nameof(IsAccountLocked)}({accountId})");
-            return true;
+            return false;
         }
     }
 
@@ -120,15 +133,6 @@ namespace MyConsole
         public string GetHashedResult(string plainText)
         {
             Console.WriteLine($"{nameof(FakeHash)}.{nameof(GetHashedResult)}({plainText})");
-            return "my hashed password";
-        }
-    }
-
-    internal class FakeProfile : IProfileRepo
-    {
-        public string GetPassword(string accountId)
-        {
-            Console.WriteLine($"{nameof(FakeProfile)}.{nameof(GetPassword)}({accountId})");
             return "my hashed password";
         }
     }
