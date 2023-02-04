@@ -12,7 +12,17 @@ namespace DependencyInjectionWorkshop.Models
     public class AuthenticationService
     {
         public bool Verify(string account, string password, string otp)
-        {
+        { 
+            //check account is locked
+            var httpClient = new HttpClient() {BaseAddress = new Uri("http://joey.com/")};
+            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked",account).Result;
+
+            isLockedResponse.EnsureSuccessStatusCode();
+            if (isLockedResponse.Content.ReadAsAsync<bool>().Result)
+            {
+                throw new FailedTooManyTimesException(){Account = account};
+            }
+            
             //get password from DB
             string passwordFromDb;
             using (var connection = new SqlConnection("my connection string"))
@@ -34,7 +44,6 @@ namespace DependencyInjectionWorkshop.Models
             var hashResult = hash.ToString();
 
             //get current otp
-            var httpClient = new HttpClient() {BaseAddress = new Uri("http://joey.com/")};
             var response = httpClient.PostAsJsonAsync("api/otps", account).Result;
             if (response.IsSuccessStatusCode)
             {
@@ -49,10 +58,18 @@ namespace DependencyInjectionWorkshop.Models
             //check valid
             if (passwordFromDb == hashResult && otp == currentOtp)
             {
+                
+                var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset"account).Result; 
+                resetResponse.EnsureSuccessStatusCode();
+                
                 return true;
             }
             else
-            {
+            { 
+                //失敗
+                var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result; 
+                addFailedCountResponse.EnsureSuccessStatusCode();
+                
                 string message = $"account:{account} try to login failed";
                 var slackClient = new SlackClient("my api token");
                 slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
@@ -60,5 +77,22 @@ namespace DependencyInjectionWorkshop.Models
                 return false;
             }
         }
+    }
+
+    public class FailedTooManyTimesException : Exception
+    {
+        public FailedTooManyTimesException()
+        {
+        }
+
+        public FailedTooManyTimesException(string message) : base(message)
+        {
+        }
+
+        public FailedTooManyTimesException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        public string Account { get; set; }
     }
 }
