@@ -10,20 +10,44 @@ using SlackAPI;
 
 namespace DependencyInjectionWorkshop.Models
 {
+    public class ProfileRepo
+    {
+        public string GetPasswordFromDb(string account)
+        {
+            //get password from DB
+            string passwordFromDb;
+            using (var connection = new SqlConnection("my connection string"))
+            {
+                passwordFromDb = connection.Query<string>("spGetUserPassword", new { Id = account },
+                                                          commandType: CommandType.StoredProcedure)
+                                           .SingleOrDefault();
+            }
+
+            return passwordFromDb;
+        }
+    }
+
     public class AuthenticationService
     {
+        private readonly ProfileRepo _profileRepo;
+
+        public AuthenticationService()
+        {
+            _profileRepo = new ProfileRepo();
+        }
+
         public async Task<bool> Verify(string account, string password, string otp)
-        { 
+        {
             //check account is locked
-            var httpClient = new HttpClient() {BaseAddress = new Uri("http://joey.com/")};
-            
+            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
+
             var isLocked = await IsLocked(account, httpClient);
             if (isLocked)
             {
-                throw new FailedTooManyTimesException(){Account = account};
+                throw new FailedTooManyTimesException() { Account = account };
             }
-            
-            var passwordFromDb = GetPasswordFromDb(account);
+
+            var passwordFromDb = _profileRepo.GetPasswordFromDb(account);
 
             var hashedPassword = GetHashedPassword(password);
 
@@ -37,7 +61,7 @@ namespace DependencyInjectionWorkshop.Models
                 return true;
             }
             else
-            { 
+            {
                 await AddFailedCount(account, httpClient);
 
                 LogFailedCount(account, httpClient);
@@ -110,20 +134,6 @@ namespace DependencyInjectionWorkshop.Models
 
             var hashResult = hash.ToString();
             return hashResult;
-        }
-
-        private static string GetPasswordFromDb(string account)
-        {
-            //get password from DB
-            string passwordFromDb;
-            using (var connection = new SqlConnection("my connection string"))
-            {
-                passwordFromDb = connection.Query<string>("spGetUserPassword", new { Id = account },
-                                                          commandType: CommandType.StoredProcedure)
-                                           .SingleOrDefault();
-            }
-
-            return passwordFromDb;
         }
 
         private static async Task<bool> IsLocked(string account, HttpClient httpClient)
