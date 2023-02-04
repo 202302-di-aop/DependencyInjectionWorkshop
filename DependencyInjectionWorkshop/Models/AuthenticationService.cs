@@ -20,6 +20,20 @@ namespace DependencyInjectionWorkshop.Models
             var resetResponse = await new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/Reset", account);
             resetResponse.EnsureSuccessStatusCode();
         }
+
+        public async Task Add(string account)
+        {
+            //失敗
+            var addFailedCountResponse = await new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/Add", account);
+            addFailedCountResponse.EnsureSuccessStatusCode();
+        }
+
+        public async Task<bool> IsLocked(string account)
+        {
+            var isLockedResponse = await new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/IsLocked", account); 
+            isLockedResponse.EnsureSuccessStatusCode();
+            return await isLockedResponse.Content.ReadAsAsync<bool>();
+        }
     }
 
     public class AuthenticationService
@@ -41,9 +55,8 @@ namespace DependencyInjectionWorkshop.Models
 
         public async Task<bool> Verify(string account, string password, string otp)
         {
-            //check account is locked
-
-            var isLocked = await IsLocked(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+            //check account is locked 
+            var isLocked = await _failCounter.IsLocked(account);
             if (isLocked)
             {
                 throw new FailedTooManyTimesException() { Account = account };
@@ -64,7 +77,7 @@ namespace DependencyInjectionWorkshop.Models
             }
             else
             {
-                await AddFailedCount(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+                await _failCounter.Add(account);
 
                 LogFailedCount(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
 
@@ -72,22 +85,6 @@ namespace DependencyInjectionWorkshop.Models
 
                 return false;
             }
-        }
-
-        private static async Task AddFailedCount(string account, HttpClient httpClient)
-        {
-            //失敗
-            var addFailedCountResponse = await httpClient.PostAsJsonAsync("api/failedCounter/Add", account);
-            addFailedCountResponse.EnsureSuccessStatusCode();
-        }
-
-        private static async Task<bool> IsLocked(string account, HttpClient httpClient)
-        {
-            var isLockedResponse = await httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", account);
-
-            isLockedResponse.EnsureSuccessStatusCode();
-            var isLocked = await isLockedResponse.Content.ReadAsAsync<bool>();
-            return isLocked;
         }
 
         private static void LogFailedCount(string account, HttpClient httpClient)
