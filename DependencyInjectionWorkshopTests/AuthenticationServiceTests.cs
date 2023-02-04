@@ -1,4 +1,5 @@
-﻿using DependencyInjectionWorkshop.Models;
+﻿using System.Threading.Tasks;
+using DependencyInjectionWorkshop.Models;
 using NUnit.Framework;
 
 namespace DependencyInjectionWorkshopTests
@@ -7,13 +8,13 @@ namespace DependencyInjectionWorkshopTests
     public class AuthenticationServiceTests
     {
         [Test]
-        public void is_valid()
+        public async Task is_valid()
         {
             var authenticationService = new AuthenticationService();
             string account="joey";
             string password="abc";
             string otp="123456";
-            var isValid = authenticationService.Verify(account, password, otp);
+            var isValid = await authenticationService.Verify(account, password, otp);
         }
     }
 }

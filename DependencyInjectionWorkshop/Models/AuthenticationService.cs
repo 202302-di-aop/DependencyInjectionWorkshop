@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using Dapper;
 using SlackAPI;
 
@@ -11,14 +12,14 @@ namespace DependencyInjectionWorkshop.Models
 {
     public class AuthenticationService
     {
-        public bool Verify(string account, string password, string otp)
+        public async Task<bool> Verify(string account, string password, string otp)
         { 
             //check account is locked
             var httpClient = new HttpClient() {BaseAddress = new Uri("http://joey.com/")};
-            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked",account).Result;
+            var isLockedResponse = await httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", account);
 
             isLockedResponse.EnsureSuccessStatusCode();
-            if (isLockedResponse.Content.ReadAsAsync<bool>().Result)
+            if (await isLockedResponse.Content.ReadAsAsync<bool>())
             {
                 throw new FailedTooManyTimesException(){Account = account};
             }
@@ -44,7 +45,7 @@ namespace DependencyInjectionWorkshop.Models
             var hashResult = hash.ToString();
 
             //get current otp
-            var response = httpClient.PostAsJsonAsync("api/otps", account).Result;
+            var response = await httpClient.PostAsJsonAsync("api/otps", account);
             if (response.IsSuccessStatusCode)
             {
             }
@@ -53,12 +54,12 @@ namespace DependencyInjectionWorkshop.Models
                 throw new Exception($"web api error, accountId:{account}");
             }
 
-            var currentOtp = response.Content.ReadAsAsync<string>().Result;
+            var currentOtp = await response.Content.ReadAsAsync<string>();
 
             //check valid
             if (passwordFromDb == hashResult && otp == currentOtp)
-            { 
-                var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result; 
+            {
+                var resetResponse = await httpClient.PostAsJsonAsync("api/failedCounter/Reset", account);
                 resetResponse.EnsureSuccessStatusCode();
                 
                 return true;
@@ -66,7 +67,7 @@ namespace DependencyInjectionWorkshop.Models
             else
             { 
                 //失敗
-                var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result; 
+                var addFailedCountResponse = await httpClient.PostAsJsonAsync("api/failedCounter/Add", account);
                 addFailedCountResponse.EnsureSuccessStatusCode();
                 
                 //驗證失敗，紀錄該 account 的 failed 總次數 
