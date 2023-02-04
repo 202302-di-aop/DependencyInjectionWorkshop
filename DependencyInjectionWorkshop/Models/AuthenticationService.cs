@@ -59,7 +59,7 @@ namespace DependencyInjectionWorkshop.Models
             if (passwordFromDb == hashResult && otp == currentOtp)
             {
                 
-                var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset"account).Result; 
+                var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result; 
                 resetResponse.EnsureSuccessStatusCode();
                 
                 return true;
