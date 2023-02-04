@@ -76,6 +76,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\AuthenticationService.cs" />
+    <Compile Include="Models\ProfileRepo.cs" />
+    <Compile Include="Models\SlackAdapter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
