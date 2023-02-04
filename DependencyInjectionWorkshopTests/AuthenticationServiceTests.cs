@@ -43,6 +43,23 @@ namespace DependencyInjectionWorkshopTests
             await ShouldBeValid("joey", "abc", "123456");
         }
 
+        [Test]
+        public async Task invalid()
+        {
+            GivenAccountIsLocked("joey", false);
+            GivenPasswordFromDb("joey", "ABC123");
+            GivenHashedResult("abc", "wrong password hashed result");
+            GivenCurrentOtp("joey", "123456");
+
+            await ShouldBeInvalid("joey", "abc", "123456");
+        }
+
+        private async Task ShouldBeInvalid(string account, string password, string otp)
+        {
+            var isValid = await _authenticationService.Verify(account, password, otp);
+            Assert.IsFalse(isValid);
+        }
+
         private async Task ShouldBeValid(string account, string password, string otp)
         {
             var isValid = await _authenticationService.Verify(account, password, otp);
