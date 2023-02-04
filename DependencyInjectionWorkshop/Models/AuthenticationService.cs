@@ -11,15 +11,63 @@ using NLog;
 
 namespace DependencyInjectionWorkshop.Models
 {
+    public class Sha256Adapter
+    {
+        public Sha256Adapter()
+        {
+        }
+
+        public string GetHashedPassword(string password)
+        {
+            //hash input password
+            var crypt = new SHA256Managed();
+            var hash = new StringBuilder();
+            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(password));
+            foreach (var theByte in crypto)
+            {
+                hash.Append(theByte.ToString("x2"));
+            }
+
+            return hash.ToString();
+        }
+    }
+
+    public class OtpAdapter
+    {
+        public OtpAdapter()
+        {
+        }
+
+        public async Task<string> GetCurrentOtp(string account, HttpClient httpClient)
+        {
+            //get current otp
+            var response = await httpClient.PostAsJsonAsync("api/otps", account);
+            if (response.IsSuccessStatusCode)
+            {
+            }
+            else
+            {
+                throw new Exception($"web api error, accountId:{account}");
+            }
+
+            var currentOtp = await response.Content.ReadAsAsync<string>();
+            return currentOtp;
+        }
+    }
+
     public class AuthenticationService
     {
         private readonly ProfileRepo _profileRepo;
         private readonly SlackAdapter _slackAdapter;
+        private readonly Sha256Adapter _sha256Adapter;
+        private readonly OtpAdapter _otpAdapter;
 
         public AuthenticationService()
         {
             _profileRepo = new ProfileRepo();
             _slackAdapter = new SlackAdapter();
+            _sha256Adapter = new Sha256Adapter();
+            _otpAdapter = new OtpAdapter();
         }
 
         public async Task<bool> Verify(string account, string password, string otp)
@@ -35,9 +83,9 @@ namespace DependencyInjectionWorkshop.Models
 
             var passwordFromDb = _profileRepo.GetPasswordFromDb(account);
 
-            var hashedPassword = GetHashedPassword(password);
+            var hashedPassword = _sha256Adapter.GetHashedPassword(password);
 
-            var currentOtp = await GetCurrentOtp(account, httpClient);
+            var currentOtp = await _otpAdapter.GetCurrentOtp(account, httpClient);
 
             //check valid
             if (passwordFromDb == hashedPassword && otp == currentOtp)
@@ -63,37 +111,6 @@ namespace DependencyInjectionWorkshop.Models
             //失敗
             var addFailedCountResponse = await httpClient.PostAsJsonAsync("api/failedCounter/Add", account);
             addFailedCountResponse.EnsureSuccessStatusCode();
-        }
-
-        private static async Task<string> GetCurrentOtp(string account, HttpClient httpClient)
-        {
-            //get current otp
-            var response = await httpClient.PostAsJsonAsync("api/otps", account);
-            if (response.IsSuccessStatusCode)
-            {
-            }
-            else
-            {
-                throw new Exception($"web api error, accountId:{account}");
-            }
-
-            var currentOtp = await response.Content.ReadAsAsync<string>();
-            return currentOtp;
-        }
-
-        private static string GetHashedPassword(string password)
-        {
-            //hash input password
-            var crypt = new SHA256Managed();
-            var hash = new StringBuilder();
-            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(password));
-            foreach (var theByte in crypto)
-            {
-                hash.Append(theByte.ToString("x2"));
-            }
-
-            var hashResult = hash.ToString();
-            return hashResult;
         }
 
         private static async Task<bool> IsLocked(string account, HttpClient httpClient)
