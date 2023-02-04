@@ -57,8 +57,7 @@ namespace DependencyInjectionWorkshop.Models
 
             //check valid
             if (passwordFromDb == hashResult && otp == currentOtp)
-            {
-                
+            { 
                 var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result; 
                 resetResponse.EnsureSuccessStatusCode();
                 
@@ -70,6 +69,17 @@ namespace DependencyInjectionWorkshop.Models
                 var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result; 
                 addFailedCountResponse.EnsureSuccessStatusCode();
                 
+                //驗證失敗，紀錄該 account 的 failed 總次數 
+                var failedCountResponse =
+                    httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", account).Result;
+    
+                failedCountResponse.EnsureSuccessStatusCode();
+    
+                var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
+                var logger = NLog.LogManager.GetCurrentClassLogger();
+                logger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
+                
+                //notify user
                 string message = $"account:{account} try to login failed";
                 var slackClient = new SlackClient("my api token");
                 slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
