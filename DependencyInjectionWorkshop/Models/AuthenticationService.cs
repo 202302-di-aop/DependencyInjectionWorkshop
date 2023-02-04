@@ -9,12 +9,26 @@ using NLog;
 
 namespace DependencyInjectionWorkshop.Models
 {
+    public class FailCounter
+    {
+        public FailCounter()
+        {
+        }
+
+        public async Task Reset(string account)
+        {
+            var resetResponse = await new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/Reset", account);
+            resetResponse.EnsureSuccessStatusCode();
+        }
+    }
+
     public class AuthenticationService
     {
         private readonly ProfileRepo _profileRepo;
         private readonly SlackAdapter _slackAdapter;
         private readonly Sha256Adapter _sha256Adapter;
         private readonly OtpAdapter _otpAdapter;
+        private readonly FailCounter _failCounter;
 
         public AuthenticationService()
         {
@@ -22,6 +36,7 @@ namespace DependencyInjectionWorkshop.Models
             _slackAdapter = new SlackAdapter();
             _sha256Adapter = new Sha256Adapter();
             _otpAdapter = new OtpAdapter();
+            _failCounter = new FailCounter();
         }
 
         public async Task<bool> Verify(string account, string password, string otp)
@@ -43,7 +58,7 @@ namespace DependencyInjectionWorkshop.Models
             //check valid
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                await ResetFailedCount(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+                await _failCounter.Reset(account);
 
                 return true;
             }
@@ -86,12 +101,6 @@ namespace DependencyInjectionWorkshop.Models
             var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
             var logger = LogManager.GetCurrentClassLogger();
             logger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
-        }
-
-        private static async Task ResetFailedCount(string account, HttpClient httpClient)
-        {
-            var resetResponse = await httpClient.PostAsJsonAsync("api/failedCounter/Reset", account);
-            resetResponse.EnsureSuccessStatusCode();
         }
     }
 
