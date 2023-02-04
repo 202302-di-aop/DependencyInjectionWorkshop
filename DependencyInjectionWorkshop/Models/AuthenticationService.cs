@@ -1,48 +1,20 @@
 ﻿#region
 
 using System;
-using System.Net.Http;
 using System.Threading.Tasks;
-using NLog;
 
 #endregion
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class FailCounter
-    {
-        public FailCounter()
-        {
-        }
-
-        public async Task Reset(string account)
-        {
-            var resetResponse = await new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/Reset", account);
-            resetResponse.EnsureSuccessStatusCode();
-        }
-
-        public async Task Add(string account)
-        {
-            //失敗
-            var addFailedCountResponse = await new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/Add", account);
-            addFailedCountResponse.EnsureSuccessStatusCode();
-        }
-
-        public async Task<bool> IsLocked(string account)
-        {
-            var isLockedResponse = await new HttpClient() { BaseAddress = new Uri("http://joey.com/") }.PostAsJsonAsync("api/failedCounter/IsLocked", account); 
-            isLockedResponse.EnsureSuccessStatusCode();
-            return await isLockedResponse.Content.ReadAsAsync<bool>();
-        }
-    }
-
     public class AuthenticationService
     {
-        private readonly ProfileRepo _profileRepo;
-        private readonly SlackAdapter _slackAdapter;
-        private readonly Sha256Adapter _sha256Adapter;
-        private readonly OtpAdapter _otpAdapter;
         private readonly FailCounter _failCounter;
+        private readonly NLogAdapter _nLogAdapter;
+        private readonly OtpAdapter _otpAdapter;
+        private readonly ProfileRepo _profileRepo;
+        private readonly Sha256Adapter _sha256Adapter;
+        private readonly SlackAdapter _slackAdapter;
 
         public AuthenticationService()
         {
@@ -51,6 +23,7 @@ namespace DependencyInjectionWorkshop.Models
             _sha256Adapter = new Sha256Adapter();
             _otpAdapter = new OtpAdapter();
             _failCounter = new FailCounter();
+            _nLogAdapter = new NLogAdapter();
         }
 
         public async Task<bool> Verify(string account, string password, string otp)
@@ -79,7 +52,7 @@ namespace DependencyInjectionWorkshop.Models
             {
                 await _failCounter.Add(account);
 
-                LogFailedCount(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
+                LogFailedCount(account);
 
                 _slackAdapter.Notify($"account:{account} try to login failed");
 
@@ -87,17 +60,11 @@ namespace DependencyInjectionWorkshop.Models
             }
         }
 
-        private static void LogFailedCount(string account, HttpClient httpClient)
+        private void LogFailedCount(string account)
         {
             //驗證失敗，紀錄該 account 的 failed 總次數 
-            var failedCountResponse =
-                httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", account).Result;
-
-            failedCountResponse.EnsureSuccessStatusCode();
-
-            var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
-            var logger = LogManager.GetCurrentClassLogger();
-            logger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
+            var failedCount = _failCounter.GetFailedCount(account);
+            _nLogAdapter.Info($"accountId:{account} failed times:{failedCount.ToString()}");
         }
     }
 
