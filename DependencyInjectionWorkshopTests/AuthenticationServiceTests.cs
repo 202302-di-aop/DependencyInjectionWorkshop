@@ -1,5 +1,6 @@
 ﻿#region
 
+using System;
 using System.Threading.Tasks;
 using DependencyInjectionWorkshop.Models;
 using NSubstitute;
@@ -48,10 +49,27 @@ namespace DependencyInjectionWorkshopTests
         {
             GivenAccountIsLocked("joey", false);
             GivenPasswordFromDb("joey", "ABC123");
-            GivenHashedResult("abc", "wrong password hashed result");
+            GivenHashedResult("abc", "wrong password hashed result"); //wrong password
             GivenCurrentOtp("joey", "123456");
 
             await ShouldBeInvalid("joey", "abc", "123456");
+        }
+
+        [Test]
+        public async Task account_is_locked()
+        {
+            GivenAccountIsLocked("joey", true); //hint: account is locked
+
+            GivenPasswordFromDb("joey", "ABC123");
+            GivenHashedResult("abc", "ABC123");
+            GivenCurrentOtp("joey", "123456");
+
+            ShouldThrow<FailedTooManyTimesException>("joey", "abc", "123456");
+        }
+
+        private void ShouldThrow<TException>(string account, string password, string otp) where TException : Exception
+        {
+            Assert.ThrowsAsync<TException>(async () => await _authenticationService.Verify(account, password, otp));
         }
 
         private async Task ShouldBeInvalid(string account, string password, string otp)
