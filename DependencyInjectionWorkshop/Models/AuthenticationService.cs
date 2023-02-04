@@ -9,53 +9,45 @@ namespace DependencyInjectionWorkshop.Models
 {
     public class AuthenticationService
     {
-        private readonly FailCounter _failCounter;
-        private readonly NLogAdapter _nLogAdapter;
-        private readonly OtpAdapter _otpAdapter;
-        private readonly ProfileRepo _profileRepo;
-        private readonly Sha256Adapter _sha256Adapter;
-        private readonly SlackAdapter _slackAdapter;
+        private readonly IFailCounter _failCounter;
+        private readonly IMyLogger _myLogger;
+        private readonly IOtp _otp;
+        private readonly IProfileRepo _profileRepo;
+        private readonly IHash _hash;
+        private readonly INotification _notification;
 
         public AuthenticationService()
         {
             _profileRepo = new ProfileRepo();
-            _slackAdapter = new SlackAdapter();
-            _sha256Adapter = new Sha256Adapter();
-            _otpAdapter = new OtpAdapter();
+            _notification = new SlackAdapter();
+            _hash = new Sha256Adapter();
+            _otp = new OtpAdapter();
             _failCounter = new FailCounter();
-            _nLogAdapter = new NLogAdapter();
+            _myLogger = new NLogAdapter();
         }
 
         public async Task<bool> Verify(string account, string password, string otp)
         {
-            //check account is locked 
-            var isLocked = await _failCounter.IsLocked(account);
-            if (isLocked)
+            if (await _failCounter.IsLocked(account))
             {
                 throw new FailedTooManyTimesException() { Account = account };
             }
 
-            var passwordFromDb = _profileRepo.GetPassword(account);
-
-            var hashedPassword = _sha256Adapter.GetHashedResult(password);
-
-            var currentOtp = await _otpAdapter.GetCurrentOtp(account);
+            var passwordFromDb = _profileRepo.GetPassword(account); 
+            var hashedPassword = _hash.GetHashedResult(password); 
+            var currentOtp = await _otp.GetCurrentOtp(account);
 
             //check valid
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                await _failCounter.Reset(account);
-
+                await _failCounter.Reset(account); 
                 return true;
             }
             else
             {
-                await _failCounter.Add(account);
-
-                LogFailedCount(account);
-
-                _slackAdapter.Notify($"account:{account} try to login failed");
-
+                await _failCounter.Add(account); 
+                LogFailedCount(account); 
+                _notification.Notify($"account:{account} try to login failed"); 
                 return false;
             }
         }
@@ -64,7 +56,7 @@ namespace DependencyInjectionWorkshop.Models
         {
             //驗證失敗，紀錄該 account 的 failed 總次數 
             var failedCount = _failCounter.GetFailedCount(account);
-            _nLogAdapter.Info($"accountId:{account} failed times:{failedCount.ToString()}");
+            _myLogger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
         }
     }
 

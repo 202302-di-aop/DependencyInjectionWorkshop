@@ -4,7 +4,12 @@ using System.Threading.Tasks;
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class OtpAdapter
+    public interface IOtp
+    {
+        Task<string> GetCurrentOtp(string account);
+    }
+
+    public class OtpAdapter : IOtp
     {
         public OtpAdapter()
         {
