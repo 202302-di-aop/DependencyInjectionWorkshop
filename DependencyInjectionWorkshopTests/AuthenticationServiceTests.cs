@@ -10,6 +10,10 @@ namespace DependencyInjectionWorkshopTests
         public void is_valid()
         {
             var authenticationService = new AuthenticationService();
+            string account="joey";
+            string password="abc";
+            string otp="123456";
+            authenticationService.Verify(account, password, otp);
         }
     }
 }
