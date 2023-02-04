@@ -10,11 +10,11 @@ namespace DependencyInjectionWorkshop.Models
     public class AuthenticationService
     {
         private readonly IFailCounter _failCounter;
+        private readonly IHash _hash;
         private readonly IMyLogger _myLogger;
+        private readonly INotification _notification;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
-        private readonly IHash _hash;
-        private readonly INotification _notification;
 
         public AuthenticationService()
         {
@@ -26,6 +26,16 @@ namespace DependencyInjectionWorkshop.Models
             _myLogger = new NLogAdapter();
         }
 
+        public AuthenticationService(IFailCounter failCounter, IMyLogger myLogger, IOtp otp, IProfileRepo profileRepo, IHash hash, INotification notification)
+        {
+            _failCounter = failCounter;
+            _myLogger = myLogger;
+            _otp = otp;
+            _profileRepo = profileRepo;
+            _hash = hash;
+            _notification = notification;
+        }
+
         public async Task<bool> Verify(string account, string password, string otp)
         {
             if (await _failCounter.IsLocked(account))
@@ -33,21 +43,21 @@ namespace DependencyInjectionWorkshop.Models
                 throw new FailedTooManyTimesException() { Account = account };
             }
 
-            var passwordFromDb = _profileRepo.GetPassword(account); 
-            var hashedPassword = _hash.GetHashedResult(password); 
+            var passwordFromDb = _profileRepo.GetPassword(account);
+            var hashedPassword = _hash.GetHashedResult(password);
             var currentOtp = await _otp.GetCurrentOtp(account);
 
             //check valid
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                await _failCounter.Reset(account); 
+                await _failCounter.Reset(account);
                 return true;
             }
             else
             {
-                await _failCounter.Add(account); 
-                LogFailedCount(account); 
-                _notification.Notify($"account:{account} try to login failed"); 
+                await _failCounter.Add(account);
+                LogFailedCount(account);
+                _notification.Notify($"account:{account} try to login failed");
                 return false;
             }
         }
