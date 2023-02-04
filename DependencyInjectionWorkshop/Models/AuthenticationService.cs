@@ -12,6 +12,7 @@ namespace DependencyInjectionWorkshop.Models
     {
         public bool Verify(string account, string password, string otp)
         {
+            //get password from DB
             string passwordFromDb;
             using (var connection = new SqlConnection("my connection string"))
             {
@@ -20,6 +21,7 @@ namespace DependencyInjectionWorkshop.Models
                                            .SingleOrDefault();
             }
 
+            //hash input password
             var crypt = new System.Security.Cryptography.SHA256Managed();
             var hash = new StringBuilder();
             var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(password));
@@ -30,6 +32,7 @@ namespace DependencyInjectionWorkshop.Models
 
             var hashResult = hash.ToString();
 
+            //get current otp
             var httpClient = new HttpClient() {BaseAddress = new Uri("http://joey.com/")};
             var response = httpClient.PostAsJsonAsync("api/otps", account).Result;
             if (response.IsSuccessStatusCode)
@@ -42,6 +45,7 @@ namespace DependencyInjectionWorkshop.Models
 
             var currentOtp = response.Content.ReadAsAsync<string>().Result;
 
+            //check valid
             if (passwordFromDb == hashResult && otp == currentOtp)
             {
                 return true;
