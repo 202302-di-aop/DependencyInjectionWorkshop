@@ -27,13 +27,29 @@ namespace DependencyInjectionWorkshop.Models
         }
     }
 
+    public class SlackAdapter
+    {
+        public SlackAdapter()
+        {
+        }
+
+        public void Notify(string message)
+        {
+            //notify user
+            var slackClient = new SlackClient("my api token");
+            slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
+        }
+    }
+
     public class AuthenticationService
     {
         private readonly ProfileRepo _profileRepo;
+        private readonly SlackAdapter _slackAdapter;
 
         public AuthenticationService()
         {
             _profileRepo = new ProfileRepo();
+            _slackAdapter = new SlackAdapter();
         }
 
         public async Task<bool> Verify(string account, string password, string otp)
@@ -66,17 +82,10 @@ namespace DependencyInjectionWorkshop.Models
 
                 LogFailedCount(account, httpClient);
 
-                Notify($"account:{account} try to login failed");
+                _slackAdapter.Notify($"account:{account} try to login failed");
 
                 return false;
             }
-        }
-
-        private static void Notify(string message)
-        {
-            //notify user
-            var slackClient = new SlackClient("my api token");
-            slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
         }
 
         private static void LogFailedCount(string account, HttpClient httpClient)
