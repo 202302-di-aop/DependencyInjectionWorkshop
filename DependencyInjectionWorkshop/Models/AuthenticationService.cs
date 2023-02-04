@@ -17,12 +17,12 @@ namespace DependencyInjectionWorkshop.Models
         {
         }
 
-        public string GetHashedPassword(string password)
+        public string GetHashedResult(string plainText)
         {
             //hash input password
             var crypt = new SHA256Managed();
             var hash = new StringBuilder();
-            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(password));
+            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(plainText));
             foreach (var theByte in crypto)
             {
                 hash.Append(theByte.ToString("x2"));
@@ -38,8 +38,9 @@ namespace DependencyInjectionWorkshop.Models
         {
         }
 
-        public async Task<string> GetCurrentOtp(string account, HttpClient httpClient)
+        public async Task<string> GetCurrentOtp(string account)
         {
+            HttpClient httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
             //get current otp
             var response = await httpClient.PostAsJsonAsync("api/otps", account);
             if (response.IsSuccessStatusCode)
@@ -50,8 +51,7 @@ namespace DependencyInjectionWorkshop.Models
                 throw new Exception($"web api error, accountId:{account}");
             }
 
-            var currentOtp = await response.Content.ReadAsAsync<string>();
-            return currentOtp;
+            return await response.Content.ReadAsAsync<string>();
         }
     }
 
@@ -73,32 +73,31 @@ namespace DependencyInjectionWorkshop.Models
         public async Task<bool> Verify(string account, string password, string otp)
         {
             //check account is locked
-            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
 
-            var isLocked = await IsLocked(account, httpClient);
+            var isLocked = await IsLocked(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
             if (isLocked)
             {
                 throw new FailedTooManyTimesException() { Account = account };
             }
 
-            var passwordFromDb = _profileRepo.GetPasswordFromDb(account);
+            var passwordFromDb = _profileRepo.GetPassword(account);
 
-            var hashedPassword = _sha256Adapter.GetHashedPassword(password);
+            var hashedPassword = _sha256Adapter.GetHashedResult(password);
 
-            var currentOtp = await _otpAdapter.GetCurrentOtp(account, httpClient);
+            var currentOtp = await _otpAdapter.GetCurrentOtp(account);
 
             //check valid
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                await ResetFailedCount(account, httpClient);
+                await ResetFailedCount(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
 
                 return true;
             }
             else
             {
-                await AddFailedCount(account, httpClient);
+                await AddFailedCount(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
 
-                LogFailedCount(account, httpClient);
+                LogFailedCount(account, new HttpClient() { BaseAddress = new Uri("http://joey.com/") });
 
                 _slackAdapter.Notify($"account:{account} try to login failed");
 
