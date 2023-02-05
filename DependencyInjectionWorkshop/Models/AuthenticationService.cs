@@ -38,6 +38,7 @@ namespace DependencyInjectionWorkshop.Models
 
         public async Task<bool> Verify(string account, string password, string otp)
         {
+            // _myLogger.Info($"{account}, {password}, {otp}");
             if (await _failCounter.IsLocked(account))
             {
                 throw new FailedTooManyTimesException() { Account = account };
@@ -51,6 +52,7 @@ namespace DependencyInjectionWorkshop.Models
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
                 await _failCounter.Reset(account);
+                _myLogger.Info("valid");
                 return true;
             }
             else
@@ -58,6 +60,7 @@ namespace DependencyInjectionWorkshop.Models
                 await _failCounter.Add(account);
                 LogFailedCount(account);
                 _notification.Notify($"account:{account} try to login failed");
+                // _myLogger.Info("invalid");
                 return false;
             }
         }
