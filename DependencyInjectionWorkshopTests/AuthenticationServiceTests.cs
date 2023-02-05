@@ -30,9 +30,9 @@ namespace DependencyInjectionWorkshopTests
             _otp = Substitute.For<IOtp>();
             _profileRepo = Substitute.For<IProfileRepo>();
             _hash = Substitute.For<IHash>();
-            _auth = new AuthenticationService(_failCounter, _myLogger, _otp, _profileRepo, _hash);
-            
             _notification = Substitute.For<INotification>();
+            _auth = new AuthenticationService(_failCounter, _myLogger, _otp, _profileRepo, _hash);
+            _auth = new FailCounterDecorator(_auth, _failCounter);
             _auth = new NotificationDecorator(_auth, _notification);
         }
 
