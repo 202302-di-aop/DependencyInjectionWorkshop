@@ -45,15 +45,12 @@ namespace DependencyInjectionWorkshop.Models
             var hashedPassword = _hash.GetHashedResult(password);
             var currentOtp = await _otp.GetCurrentOtp(account);
 
-            //check valid
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
-                await _failCounter.Reset(account);
                 return true;
             }
             else
             {
-                await _failCounter.Add(account);
                 LogFailedCount(account);
                 return false;
             }

@@ -1,4 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿#region
+
+using System.Threading.Tasks;
+
+#endregion
 
 namespace DependencyInjectionWorkshop.Models
 {
@@ -17,7 +21,17 @@ namespace DependencyInjectionWorkshop.Models
         {
             await CheckAccountLocked(account);
 
-            return await _auth.Verify(account, password, otp);
+            var isValid = await _auth.Verify(account, password, otp);
+            if (isValid)
+            {
+                await _failCounter.Reset(account);
+            }
+            else
+            {
+                await _failCounter.Add(account);
+            }
+
+            return isValid;
         }
 
         private async Task CheckAccountLocked(string account)
