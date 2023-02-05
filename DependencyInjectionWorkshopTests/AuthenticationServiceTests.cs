@@ -1,6 +1,7 @@
 ﻿#region
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using DependencyInjectionWorkshop.Models;
 using NSubstitute;
@@ -45,6 +46,19 @@ namespace DependencyInjectionWorkshopTests
         }
 
         [Test]
+        public async Task reset_failed_count_when_valid()
+        {
+            GivenAccountIsLocked("joey", false);
+            GivenPasswordFromDb("joey", "ABC123");
+            GivenHashedResult("abc", "ABC123");
+            GivenCurrentOtp("joey", "123456");
+
+            await _authenticationService.Verify("joey", "abc", "123456");
+
+            await _failCounter.Received(1).Reset("joey");
+        }
+
+        [Test]
         public async Task invalid()
         {
             GivenAccountIsLocked("joey", false);
@@ -53,6 +67,28 @@ namespace DependencyInjectionWorkshopTests
             GivenCurrentOtp("joey", "123456");
 
             await ShouldBeInvalid("joey", "abc", "123456");
+        }
+
+        [Test]
+        public async Task should_notify_user_when_invalid()
+        {
+            await WhenInvalid("joey");
+            ShouldNotify("joey", "fail");
+        }
+
+        [Test]
+        public async Task should_add_failed_count_when_invalid()
+        {
+            await WhenInvalid("joey");
+            await ShouldAddFailedCount("joey");
+        }
+
+        [Test]
+        public async Task should_log_failed_count_when_invalid()
+        {
+            GivenLatestFailedCount("joey", 3);
+            await WhenInvalid("joey");
+            ShouldLog("3");
         }
 
         [Test]
@@ -65,6 +101,39 @@ namespace DependencyInjectionWorkshopTests
             GivenCurrentOtp("joey", "123456");
 
             ShouldThrow<FailedTooManyTimesException>("joey", "abc", "123456");
+        }
+
+        private void ShouldLog(string keyword)
+        {
+            _myLogger.Received(1).Info(Arg.Is<string>(s => s.Contains(keyword)));
+        }
+
+        private void GivenLatestFailedCount(string account, int failedCount)
+        {
+            _failCounter.GetFailedCount(account).Returns(failedCount);
+        }
+
+        private async Task ShouldAddFailedCount(string account)
+        {
+            await _failCounter.Received(1).Add(account);
+        }
+
+        private async Task WhenInvalid(string account)
+        {
+            GivenAccountIsLocked(account, false);
+            GivenPasswordFromDb(account, "ABC123");
+            GivenHashedResult("abc", "wrong password hashed result");
+            GivenCurrentOtp(account, "123456");
+
+            await _authenticationService.Verify(account, "abc", "123456");
+        }
+
+        private void ShouldNotify(params string[] keywords)
+        {
+            _notification.Received(1)
+                         .Notify(Arg.Is<string>(s =>
+                                                    keywords.All(k => s.Contains(k))
+                                 ));
         }
 
         private void ShouldThrow<TException>(string account, string password, string otp) where TException : Exception
