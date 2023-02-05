@@ -7,33 +7,36 @@ using System.Threading.Tasks;
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class AuthenticationService
+    public interface IAuth
+    {
+        Task<bool> Verify(string account, string password, string otp);
+    }
+
+    public class AuthenticationService : IAuth
     {
         private readonly IFailCounter _failCounter;
         private readonly IHash _hash;
         private readonly IMyLogger _myLogger;
-        private readonly INotification _notification;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
 
         public AuthenticationService()
         {
             _profileRepo = new ProfileRepo();
-            _notification = new SlackAdapter();
+            // _notification = new SlackAdapter();
             _hash = new Sha256Adapter();
             _otp = new OtpAdapter();
             _failCounter = new FailCounter();
             _myLogger = new NLogAdapter();
         }
 
-        public AuthenticationService(IFailCounter failCounter, IMyLogger myLogger, IOtp otp, IProfileRepo profileRepo, IHash hash, INotification notification)
+        public AuthenticationService(IFailCounter failCounter, IMyLogger myLogger, IOtp otp, IProfileRepo profileRepo, IHash hash)
         {
             _failCounter = failCounter;
             _myLogger = myLogger;
             _otp = otp;
             _profileRepo = profileRepo;
             _hash = hash;
-            _notification = notification;
         }
 
         public async Task<bool> Verify(string account, string password, string otp)
@@ -59,7 +62,6 @@ namespace DependencyInjectionWorkshop.Models
             {
                 await _failCounter.Add(account);
                 LogFailedCount(account);
-                _notification.Notify($"account:{account} try to login failed");
                 // _myLogger.Info("invalid");
                 return false;
             }

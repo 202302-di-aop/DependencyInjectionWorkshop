@@ -14,7 +14,7 @@ namespace DependencyInjectionWorkshopTests
     [TestFixture]
     public class AuthenticationServiceTests
     {
-        private AuthenticationService _authenticationService;
+        private IAuth _auth;
         private IFailCounter _failCounter;
         private IHash _hash;
         private IMyLogger _myLogger;
@@ -30,8 +30,10 @@ namespace DependencyInjectionWorkshopTests
             _otp = Substitute.For<IOtp>();
             _profileRepo = Substitute.For<IProfileRepo>();
             _hash = Substitute.For<IHash>();
+            _auth = new AuthenticationService(_failCounter, _myLogger, _otp, _profileRepo, _hash);
+            
             _notification = Substitute.For<INotification>();
-            _authenticationService = new AuthenticationService(_failCounter, _myLogger, _otp, _profileRepo, _hash, _notification);
+            _auth = new NotificationDecorator(_auth, _notification);
         }
 
         [Test]
@@ -53,7 +55,7 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("abc", "ABC123");
             GivenCurrentOtp("joey", "123456");
 
-            await _authenticationService.Verify("joey", "abc", "123456");
+            await _auth.Verify("joey", "abc", "123456");
 
             await _failCounter.Received(1).Reset("joey");
         }
@@ -125,7 +127,7 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("abc", "wrong password hashed result");
             GivenCurrentOtp(account, "123456");
 
-            await _authenticationService.Verify(account, "abc", "123456");
+            await _auth.Verify(account, "abc", "123456");
         }
 
         private void ShouldNotify(params string[] keywords)
@@ -138,18 +140,18 @@ namespace DependencyInjectionWorkshopTests
 
         private void ShouldThrow<TException>(string account, string password, string otp) where TException : Exception
         {
-            Assert.ThrowsAsync<TException>(async () => await _authenticationService.Verify(account, password, otp));
+            Assert.ThrowsAsync<TException>(async () => await _auth.Verify(account, password, otp));
         }
 
         private async Task ShouldBeInvalid(string account, string password, string otp)
         {
-            var isValid = await _authenticationService.Verify(account, password, otp);
+            var isValid = await _auth.Verify(account, password, otp);
             Assert.IsFalse(isValid);
         }
 
         private async Task ShouldBeValid(string account, string password, string otp)
         {
-            var isValid = await _authenticationService.Verify(account, password, otp);
+            var isValid = await _auth.Verify(account, password, otp);
             Assert.IsTrue(isValid);
         }
 
