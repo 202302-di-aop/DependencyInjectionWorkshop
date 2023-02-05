@@ -33,7 +33,7 @@ namespace DependencyInjectionWorkshopTests
             _notification = Substitute.For<INotification>();
             _auth = new AuthenticationService(_otp, _profileRepo, _hash);
             _auth = new FailCounterDecorator(_auth, _failCounter, _myLogger);
-            _auth = new NotificationDecorator(_auth, _notification);
+            _auth = new NotificationAuthDecorator(_auth, _notification);
         }
 
         [Test]
