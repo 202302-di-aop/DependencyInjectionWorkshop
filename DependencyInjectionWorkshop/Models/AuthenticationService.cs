@@ -19,11 +19,9 @@ namespace DependencyInjectionWorkshop.Models
         private readonly IMyLogger _myLogger;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
-        // private readonly FailCounterDecorator _failCounterDecorator;
 
         public AuthenticationService()
         {
-            // _failCounterDecorator = new FailCounterDecorator(this);
             _profileRepo = new ProfileRepo();
             // _notification = new SlackAdapter();
             _hash = new Sha256Adapter();
@@ -34,7 +32,6 @@ namespace DependencyInjectionWorkshop.Models
 
         public AuthenticationService(IFailCounter failCounter, IMyLogger myLogger, IOtp otp, IProfileRepo profileRepo, IHash hash)
         {
-            // _failCounterDecorator = new FailCounterDecorator(this);
             _failCounter = failCounter;
             _myLogger = myLogger;
             _otp = otp;
@@ -44,9 +41,6 @@ namespace DependencyInjectionWorkshop.Models
 
         public async Task<bool> Verify(string account, string password, string otp)
         {
-            // _myLogger.Info($"{account}, {password}, {otp}");
-            // await _failCounterDecorator.CheckAccountLocked(account);
-
             var passwordFromDb = _profileRepo.GetPassword(account);
             var hashedPassword = _hash.GetHashedResult(password);
             var currentOtp = await _otp.GetCurrentOtp(account);
@@ -55,14 +49,12 @@ namespace DependencyInjectionWorkshop.Models
             if (passwordFromDb == hashedPassword && otp == currentOtp)
             {
                 await _failCounter.Reset(account);
-                _myLogger.Info("valid");
                 return true;
             }
             else
             {
                 await _failCounter.Add(account);
                 LogFailedCount(account);
-                // _myLogger.Info("invalid");
                 return false;
             }
         }
