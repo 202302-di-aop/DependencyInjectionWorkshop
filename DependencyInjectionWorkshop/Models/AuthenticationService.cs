@@ -14,26 +14,19 @@ namespace DependencyInjectionWorkshop.Models
 
     public class AuthenticationService : IAuth
     {
-        private readonly IFailCounter _failCounter;
         private readonly IHash _hash;
-        private readonly IMyLogger _myLogger;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
 
         public AuthenticationService()
         {
             _profileRepo = new ProfileRepo();
-            // _notification = new SlackAdapter();
             _hash = new Sha256Adapter();
             _otp = new OtpAdapter();
-            _failCounter = new FailCounter();
-            _myLogger = new NLogAdapter();
         }
 
-        public AuthenticationService(IFailCounter failCounter, IMyLogger myLogger, IOtp otp, IProfileRepo profileRepo, IHash hash)
+        public AuthenticationService(IOtp otp, IProfileRepo profileRepo, IHash hash)
         {
-            _failCounter = failCounter;
-            _myLogger = myLogger;
             _otp = otp;
             _profileRepo = profileRepo;
             _hash = hash;
@@ -51,16 +44,8 @@ namespace DependencyInjectionWorkshop.Models
             }
             else
             {
-                LogFailedCount(account);
                 return false;
             }
-        }
-
-        private void LogFailedCount(string account)
-        {
-            //驗證失敗，紀錄該 account 的 failed 總次數 
-            var failedCount = _failCounter.GetFailedCount(account);
-            _myLogger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
         }
     }
 

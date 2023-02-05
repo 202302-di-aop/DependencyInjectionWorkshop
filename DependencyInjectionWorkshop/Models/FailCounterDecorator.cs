@@ -10,11 +10,13 @@ namespace DependencyInjectionWorkshop.Models
     {
         private readonly IAuth _auth;
         private readonly IFailCounter _failCounter;
+        private readonly IMyLogger _myLogger;
 
-        public FailCounterDecorator(IAuth auth, IFailCounter failCounter)
+        public FailCounterDecorator(IAuth auth, IFailCounter failCounter, IMyLogger myLogger)
         {
             _auth = auth;
             _failCounter = failCounter;
+            _myLogger = myLogger;
         }
 
         public async Task<bool> Verify(string account, string password, string otp)
@@ -29,6 +31,7 @@ namespace DependencyInjectionWorkshop.Models
             else
             {
                 await _failCounter.Add(account);
+                LogFailedCount(account);
             }
 
             return isValid;
@@ -40,6 +43,13 @@ namespace DependencyInjectionWorkshop.Models
             {
                 throw new FailedTooManyTimesException() { Account = account };
             }
+        }
+
+        private void LogFailedCount(string account)
+        {
+            //驗證失敗，紀錄該 account 的 failed 總次數 
+            var failedCount = _failCounter.GetFailedCount(account);
+            _myLogger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
         }
     }
 }
