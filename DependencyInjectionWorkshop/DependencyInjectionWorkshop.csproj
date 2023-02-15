@@ -76,6 +76,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\AuthenticationService.cs" />
+    <Compile Include="Models\FailCounter.cs" />
+    <Compile Include="Models\NLogAdapter.cs" />
+    <Compile Include="Models\OtpAdapter.cs" />
+    <Compile Include="Models\ProfileRepo.cs" />
+    <Compile Include="Models\Sha256Adapter.cs" />
+    <Compile Include="Models\SlackClientAdapter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
