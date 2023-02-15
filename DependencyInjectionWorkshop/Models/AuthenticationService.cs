@@ -13,6 +13,7 @@ namespace DependencyInjectionWorkshop.Models
     {
         public bool Verify(string account, string password, string otp)
         {
+            //check account is locked
             var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
             var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", account).Result;
 
@@ -22,6 +23,7 @@ namespace DependencyInjectionWorkshop.Models
                 throw new FailedTooManyTimesException() { AccountId = account };
             }
 
+            // get password from db
             string passwordFromDb;
             using (var connection = new SqlConnection("my connection string"))
             {
@@ -30,6 +32,7 @@ namespace DependencyInjectionWorkshop.Models
                                            .SingleOrDefault();
             }
 
+            // get hashed password
             var crypt = new System.Security.Cryptography.SHA256Managed();
             var hash = new StringBuilder();
             var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(password));
@@ -40,6 +43,7 @@ namespace DependencyInjectionWorkshop.Models
 
             var hashedResult = hash.ToString();
 
+            // get current otp
             var response = httpClient.PostAsJsonAsync("api/otps", account).Result;
             if (!response.IsSuccessStatusCode)
             {
@@ -48,8 +52,10 @@ namespace DependencyInjectionWorkshop.Models
 
             var currentOtp = response.Content.ReadAsAsync<string>().Result;
 
+            // compare
             if (passwordFromDb == hashedResult && otp == currentOtp)
             {
+                // reset failed count
                 var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result;
                 resetResponse.EnsureSuccessStatusCode();
 
@@ -61,18 +67,17 @@ namespace DependencyInjectionWorkshop.Models
                 var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result;
                 addFailedCountResponse.EnsureSuccessStatusCode();
 
-                
                 //驗證失敗，紀錄該 account 的 failed 總次數 
                 var failedCountResponse =
                     httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", account).Result;
-    
+
                 failedCountResponse.EnsureSuccessStatusCode();
-    
+
                 var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
                 var logger = NLog.LogManager.GetCurrentClassLogger();
                 logger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
 
-                
+                // slack notify user
                 string message = $"account:{account} try to login failed";
                 var slackClient = new SlackClient("my api token");
                 slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
