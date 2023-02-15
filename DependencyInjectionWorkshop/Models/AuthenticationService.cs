@@ -1,7 +1,6 @@
 ﻿#region
 
 using System;
-using System.Net.Http;
 
 #endregion
 
@@ -12,9 +11,9 @@ namespace DependencyInjectionWorkshop.Models
         private readonly IFailCounter _failCounter;
         private readonly IHash _hash;
         private readonly IMyLogger _myLogger;
+        private readonly INotification _notification;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
-        private readonly INotification _notification;
 
         public AuthenticationService()
         {
@@ -38,9 +37,7 @@ namespace DependencyInjectionWorkshop.Models
 
         public bool Verify(string account, string password, string otp)
         {
-            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
-
-            var isLocked = _failCounter.IsLocked(account, httpClient);
+            var isLocked = _failCounter.IsLocked(account);
             if (isLocked)
             {
                 throw new FailedTooManyTimesException() { AccountId = account };
@@ -48,22 +45,22 @@ namespace DependencyInjectionWorkshop.Models
 
             var passwordFromDb = _profileRepo.GetPasswordFromDb(account);
             var hashedResult = _hash.GetHashedResult(password);
-            var currentOtp = _otp.GetCurrentOtp(account, httpClient);
+            var currentOtp = _otp.GetCurrentOtp(account);
 
             if (passwordFromDb == hashedResult && otp == currentOtp)
             {
-                _failCounter.ResetFailedCount(account, httpClient);
+                _failCounter.Reset(account);
                 return true;
             }
             else
             {
-                _failCounter.AddFailedCount(account, httpClient);
+                _failCounter.Add(account);
 
                 //驗證失敗，紀錄該 account 的 failed 總次數 
-                var failedCount = _failCounter.GetFailedCount(account, httpClient);
-                _myLogger.LogInfo($"accountId:{account} failed times:{failedCount.ToString()}");
+                var failedCount = _failCounter.Get(account);
+                _myLogger.LogInfo($"accountId:{account} failed times:{failedCount.ToString()}.");
 
-                _notification.NotifyUser($"account:{account} try to login failed");
+                _notification.NotifyUser($"account: {account} try to login failed");
                 return false;
             }
         }

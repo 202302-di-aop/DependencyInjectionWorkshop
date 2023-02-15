@@ -1,47 +1,51 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 
 namespace DependencyInjectionWorkshop.Models
 {
     public interface IFailCounter
     {
-        void ResetFailedCount(string account, HttpClient httpClient);
-        void AddFailedCount(string account, HttpClient httpClient);
-        bool IsLocked(string account, HttpClient httpClient);
-        int GetFailedCount(string account, HttpClient httpClient);
+        void Reset(string account);
+        void Add(string account);
+        bool IsLocked(string account);
+        int Get(string account);
     }
 
     public class FailCounter : IFailCounter
     {
+        private HttpClient _httpClient;
+
         public FailCounter()
         {
+            _httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
         }
 
-        public void ResetFailedCount(string account, HttpClient httpClient)
+        public void Reset(string account)
         {
             // reset failed count
-            var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result;
+            var resetResponse = _httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result;
             resetResponse.EnsureSuccessStatusCode();
         }
 
-        public void AddFailedCount(string account, HttpClient httpClient)
+        public void Add(string account)
         {
-            var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result;
+            var addFailedCountResponse = _httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result;
             addFailedCountResponse.EnsureSuccessStatusCode();
         }
 
-        public bool IsLocked(string account, HttpClient httpClient)
+        public bool IsLocked(string account)
         {
-            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", account).Result;
+            var isLockedResponse = _httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", account).Result;
 
             isLockedResponse.EnsureSuccessStatusCode();
             var isLocked = isLockedResponse.Content.ReadAsAsync<bool>().Result;
             return isLocked;
         }
 
-        public int GetFailedCount(string account, HttpClient httpClient)
+        public int Get(string account)
         {
             var failedCountResponse =
-                httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", account).Result;
+                _httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", account).Result;
 
             failedCountResponse.EnsureSuccessStatusCode();
 
