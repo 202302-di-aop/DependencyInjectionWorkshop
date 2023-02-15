@@ -15,93 +15,30 @@ using SlackAPI;
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class AuthenticationService
+    public class ProfileRepo
     {
-        public bool Verify(string account, string password, string otp)
+        public string GetPasswordFromDb(string account)
         {
-            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
-            
-            var isLocked = IsLocked(account, httpClient);
-            if (isLocked)
+            // get password from db
+            string passwordFromDb;
+            using (var connection = new SqlConnection("my connection string"))
             {
-                throw new FailedTooManyTimesException() { AccountId = account };
+                passwordFromDb = connection.Query<string>("spGetUserPassword", new { Id = account },
+                                                          commandType: CommandType.StoredProcedure)
+                                           .SingleOrDefault();
             }
 
-            var passwordFromDb = GetPasswordFromDb(account); 
-            var hashedResult = GetHashedResult(password); 
-            var currentOtp = GetCurrentOtp(account, httpClient);
-
-            if (passwordFromDb == hashedResult && otp == currentOtp)
-            {
-                ResetFailedCount(account, httpClient); 
-                return true;
-            }
-            else
-            {
-                AddFailedCount(account, httpClient); 
-                LogLatestFailedCount(account, httpClient); 
-                NotifyUser(account); 
-                return false;
-            }
+            return passwordFromDb;
         }
+    }
 
-        private static bool IsLocked(string account, HttpClient httpClient)
+    public class Sha256Adapter
+    {
+        public Sha256Adapter()
         {
-            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", account).Result;
-
-            isLockedResponse.EnsureSuccessStatusCode();
-            var isLocked = isLockedResponse.Content.ReadAsAsync<bool>().Result;
-            return isLocked;
         }
 
-        private static void NotifyUser(string account)
-        {
-            // slack notify user
-            string message = $"account:{account} try to login failed";
-            var slackClient = new SlackClient("my api token");
-            slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
-        }
-
-        private static void LogLatestFailedCount(string account, HttpClient httpClient)
-        {
-            //驗證失敗，紀錄該 account 的 failed 總次數 
-            var failedCountResponse =
-                httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", account).Result;
-
-            failedCountResponse.EnsureSuccessStatusCode();
-
-            var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
-            var logger = LogManager.GetCurrentClassLogger();
-            logger.Info($"accountId:{account} failed times:{failedCount.ToString()}");
-        }
-
-        private static void AddFailedCount(string account, HttpClient httpClient)
-        {
-            var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result;
-            addFailedCountResponse.EnsureSuccessStatusCode();
-        }
-
-        private static void ResetFailedCount(string account, HttpClient httpClient)
-        {
-            // reset failed count
-            var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result;
-            resetResponse.EnsureSuccessStatusCode();
-        }
-
-        private static string GetCurrentOtp(string account, HttpClient httpClient)
-        {
-            // get current otp
-            var response = httpClient.PostAsJsonAsync("api/otps", account).Result;
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"web api error, accountId:{account}");
-            }
-
-            var currentOtp = response.Content.ReadAsAsync<string>().Result;
-            return currentOtp;
-        }
-
-        private static string GetHashedResult(string password)
+        public string GetHashedResult(string password)
         {
             // get hashed password
             var crypt = new SHA256Managed();
@@ -115,19 +52,145 @@ namespace DependencyInjectionWorkshop.Models
             var hashedResult = hash.ToString();
             return hashedResult;
         }
+    }
 
-        private static string GetPasswordFromDb(string account)
+    public class OtpAdapter
+    {
+        public OtpAdapter()
         {
-            // get password from db
-            string passwordFromDb;
-            using (var connection = new SqlConnection("my connection string"))
+        }
+
+        public string GetCurrentOtp(string account, HttpClient httpClient)
+        {
+            // get current otp
+            var response = httpClient.PostAsJsonAsync("api/otps", account).Result;
+            if (!response.IsSuccessStatusCode)
             {
-                passwordFromDb = connection.Query<string>("spGetUserPassword", new { Id = account },
-                                                          commandType: CommandType.StoredProcedure)
-                                           .SingleOrDefault();
+                throw new Exception($"web api error, accountId:{account}");
             }
 
-            return passwordFromDb;
+            var currentOtp = response.Content.ReadAsAsync<string>().Result;
+            return currentOtp;
+        }
+    }
+
+    public class SlackClientAdapter
+    {
+        public SlackClientAdapter()
+        {
+        }
+
+        public void NotifyUser(string account)
+        {
+            // slack notify user
+            string message = $"account:{account} try to login failed";
+            var slackClient = new SlackClient("my api token");
+            slackClient.PostMessage(response1 => { }, "my channel", message, "my bot name");
+        }
+    }
+
+    public class FailCounter
+    {
+        public FailCounter()
+        {
+        }
+
+        public void ResetFailedCount(string account, HttpClient httpClient)
+        {
+            // reset failed count
+            var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", account).Result;
+            resetResponse.EnsureSuccessStatusCode();
+        }
+
+        public void AddFailedCount(string account, HttpClient httpClient)
+        {
+            var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", account).Result;
+            addFailedCountResponse.EnsureSuccessStatusCode();
+        }
+
+        public bool IsLocked(string account, HttpClient httpClient)
+        {
+            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", account).Result;
+
+            isLockedResponse.EnsureSuccessStatusCode();
+            var isLocked = isLockedResponse.Content.ReadAsAsync<bool>().Result;
+            return isLocked;
+        }
+
+        public int GetFailedCount(string account, HttpClient httpClient)
+        {
+            var failedCountResponse =
+                httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", account).Result;
+
+            failedCountResponse.EnsureSuccessStatusCode();
+
+            var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
+            return failedCount;
+        }
+    }
+
+    public class NLogAdapter
+    {
+        public NLogAdapter()
+        {
+        }
+
+        public void LogInfo(string message)
+        {
+            var logger = LogManager.GetCurrentClassLogger();
+            logger.Info(message);
+        }
+    }
+
+    public class AuthenticationService
+    {
+        private readonly ProfileRepo _profileRepo;
+        private readonly Sha256Adapter _sha256Adapter;
+        private readonly OtpAdapter _otpAdapter;
+        private readonly SlackClientAdapter _slackClientAdapter;
+        private readonly FailCounter _failCounter;
+        private readonly NLogAdapter _nLogAdapter;
+
+        public AuthenticationService()
+        {
+            _profileRepo = new ProfileRepo();
+            _sha256Adapter = new Sha256Adapter();
+            _otpAdapter = new OtpAdapter();
+            _slackClientAdapter = new SlackClientAdapter();
+            _failCounter = new FailCounter();
+            _nLogAdapter = new NLogAdapter();
+        }
+
+        public bool Verify(string account, string password, string otp)
+        {
+            var httpClient = new HttpClient() { BaseAddress = new Uri("http://joey.com/") };
+
+            var isLocked = _failCounter.IsLocked(account, httpClient);
+            if (isLocked)
+            {
+                throw new FailedTooManyTimesException() { AccountId = account };
+            }
+
+            var passwordFromDb = _profileRepo.GetPasswordFromDb(account);
+            var hashedResult = _sha256Adapter.GetHashedResult(password);
+            var currentOtp = _otpAdapter.GetCurrentOtp(account, httpClient);
+
+            if (passwordFromDb == hashedResult && otp == currentOtp)
+            {
+                _failCounter.ResetFailedCount(account, httpClient);
+                return true;
+            }
+            else
+            {
+                _failCounter.AddFailedCount(account, httpClient);
+                
+                //驗證失敗，紀錄該 account 的 failed 總次數 
+                var failedCount = _failCounter.GetFailedCount(account, httpClient);
+                _nLogAdapter.LogInfo($"accountId:{account} failed times:{failedCount.ToString()}");
+                
+                _slackClientAdapter.NotifyUser(account);
+                return false;
+            }
         }
     }
 
