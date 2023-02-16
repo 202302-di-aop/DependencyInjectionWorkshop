@@ -6,8 +6,13 @@ using System;
 
 namespace DependencyInjectionWorkshop.Models
 {
+    public class AlarmAttribute : Attribute
+    {
+        public string RoleId { get; set; }
+    }
     public interface IAuth
     {
+        [Alarm(RoleId = "denny")]
         bool Verify(string account, string password, string otp);
     }
 

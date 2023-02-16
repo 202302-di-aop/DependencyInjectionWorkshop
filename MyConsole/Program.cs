@@ -11,6 +11,52 @@ using DependencyInjectionWorkshop.Models;
 
 namespace MyConsole
 {
+    internal class AlarmInterceptor : IInterceptor
+    {
+        private readonly IAlarm _alarm;
+        //private readonly string _supportId = "911";
+
+        public AlarmInterceptor(IAlarm alarm)
+        {
+            _alarm = alarm;
+        }
+
+        public void Intercept(IInvocation invocation)
+        {
+            if (Attribute.GetCustomAttribute(invocation.Method, typeof(AlarmAttribute)) is AlarmAttribute alarmAttribute
+               )
+            {
+                string roleId = alarmAttribute.RoleId;
+                try
+                {
+                    invocation.Proceed();
+                }
+                catch (Exception e)
+                {
+                    _alarm.Raise(roleId, e);
+                    throw;
+                }
+            }
+            else
+            {
+                invocation.Proceed();
+            }
+        }
+    }
+
+    public class FakeAlarm : IAlarm
+    {
+        public void Raise(string supportId, Exception exception)
+        {
+            Console.WriteLine($"support:{supportId}, ex:{exception.Message}");
+        }
+    }
+
+    public interface IAlarm
+    {
+        void Raise(string supportId, Exception exception);
+    }
+
     public class LogInterceptor : IInterceptor
     {
         private readonly IMyLogger _logger;
@@ -57,8 +103,15 @@ namespace MyConsole
             RegisterContainer();
 
             var authentication = _container.Resolve<IAuth>();
-            var isValid = authentication.Verify("joey", "abc", "123456");
-            Console.WriteLine($"console result is {isValid}");
+            try
+            {
+                var isValid = authentication.Verify("joey", "abc", "123456");
+                Console.WriteLine($"console result is {isValid}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("console crash:" + e.Message);
+            }
         }
 
         private static void RegisterContainer()
@@ -70,17 +123,20 @@ namespace MyConsole
             builder.RegisterType<FakeLogger>().As<IMyLogger>();
             builder.RegisterType<FakeFailedCounter>().As<IFailCounter>();
             // builder.RegisterType<FakeSlack>().As<INotification>();
+
+            builder.RegisterType<FakeAlarm>().As<IAlarm>();
+            builder.RegisterType<AlarmInterceptor>().As<AlarmInterceptor>();
+
             builder.RegisterType<LogInterceptor>().As<LogInterceptor>();
             builder.RegisterType<FakeLine>()
                    .As<INotification>()
                    .EnableInterfaceInterceptors()
                    .InterceptedBy(typeof(LogInterceptor));
 
-
             builder.RegisterType<AuthenticationService>()
                    .As<IAuth>()
                    .EnableInterfaceInterceptors()
-                   .InterceptedBy(typeof(LogInterceptor));
+                   .InterceptedBy(typeof(LogInterceptor), typeof(AlarmInterceptor));
 
             builder.RegisterDecorator<FailCounterDecorator, IAuth>();
             builder.RegisterDecorator<NotificationDecorator, IAuth>();
@@ -171,7 +227,7 @@ namespace MyConsole
         public bool IsAccountLocked(string accountId)
         {
             Console.WriteLine($"{nameof(FakeFailedCounter)}.{nameof(IsAccountLocked)}({accountId})");
-            return false;
+            return true;
         }
     }
 
