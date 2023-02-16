@@ -6,7 +6,39 @@ using System;
 
 namespace DependencyInjectionWorkshop.Models
 {
-    public class AuthenticationService
+    public interface IAuth
+    {
+        bool Verify(string account, string password, string otp);
+    }
+
+    public class FailCounterDecorator : IAuth
+    {
+        private readonly IAuth _auth;
+        private readonly IFailCounter _failCounter;
+
+        public FailCounterDecorator(IAuth auth, IFailCounter failCounter)
+        {
+            _auth = auth;
+            _failCounter = failCounter;
+        }
+
+        public bool Verify(string account, string password, string otp)
+        {
+            CheckAccountLocked(account);
+            return _auth.Verify(account, password, otp);
+        }
+
+        private void CheckAccountLocked(string account)
+        {
+            var isLocked = _failCounter.IsLocked(account);
+            if (isLocked)
+            {
+                throw new FailedTooManyTimesException() { AccountId = account };
+            }
+        }
+    }
+
+    public class AuthenticationService : IAuth
     {
         private readonly IFailCounter _failCounter;
         private readonly IHash _hash;
@@ -14,9 +46,11 @@ namespace DependencyInjectionWorkshop.Models
         private readonly INotification _notification;
         private readonly IOtp _otp;
         private readonly IProfileRepo _profileRepo;
+        // private readonly FailCounterDecorator _failCounterDecorator;
 
         public AuthenticationService()
         {
+            // _failCounterDecorator = new FailCounterDecorator(this);
             _profileRepo = new ProfileRepo();
             _hash = new Sha256Adapter();
             _otp = new OtpAdapter();
@@ -27,6 +61,7 @@ namespace DependencyInjectionWorkshop.Models
 
         public AuthenticationService(IFailCounter failCounter, IHash hash, IMyLogger myLogger, IOtp otp, IProfileRepo profileRepo, INotification notification)
         {
+            // _failCounterDecorator = new FailCounterDecorator(this);
             _failCounter = failCounter;
             _hash = hash;
             _myLogger = myLogger;
@@ -37,11 +72,7 @@ namespace DependencyInjectionWorkshop.Models
 
         public bool Verify(string account, string password, string otp)
         {
-            var isLocked = _failCounter.IsLocked(account);
-            if (isLocked)
-            {
-                throw new FailedTooManyTimesException() { AccountId = account };
-            }
+            // _failCounterDecorator.CheckAccountLocked(account);
 
             var passwordFromDb = _profileRepo.GetPasswordFromDb(account);
             var hashedResult = _hash.GetHashedResult(password);

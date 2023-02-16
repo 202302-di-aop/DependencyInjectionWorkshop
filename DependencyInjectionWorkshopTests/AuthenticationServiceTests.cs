@@ -12,7 +12,7 @@ namespace DependencyInjectionWorkshopTests
     [TestFixture]
     public class AuthenticationServiceTests
     {
-        private AuthenticationService _authenticationService;
+        private IAuth _auth;
         private IFailCounter _failCounter;
         private IHash _hash;
         private IMyLogger _myLogger;
@@ -29,7 +29,8 @@ namespace DependencyInjectionWorkshopTests
             _otp = Substitute.For<IOtp>();
             _profileRepo = Substitute.For<IProfileRepo>();
             _notification = Substitute.For<INotification>();
-            _authenticationService = new AuthenticationService(_failCounter, _hash, _myLogger, _otp, _profileRepo, _notification);
+            _auth = new AuthenticationService(_failCounter, _hash, _myLogger, _otp, _profileRepo, _notification);
+            _auth = new FailCounterDecorator(_auth, _failCounter);
         }
 
         [Test]
@@ -65,7 +66,7 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("123", "wrong password");
             GivenCurrentOtp("joey", "123456");
 
-            ShouldThrow<FailedTooManyTimesException>(() => _authenticationService.Verify("joey", "123", "123456"));
+            ShouldThrow<FailedTooManyTimesException>(() => _auth.Verify("joey", "123", "123456"));
         }
 
         [Test]
@@ -127,7 +128,7 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("123", "wrong password");
             GivenCurrentOtp(account, "123456");
 
-            _authenticationService.Verify(account, "123", "123456");
+            _auth.Verify(account, "123", "123456");
         }
 
         private void ShouldResetFailedCount(string account)
@@ -143,7 +144,7 @@ namespace DependencyInjectionWorkshopTests
             GivenHashedResult("123", "abc");
             GivenCurrentOtp(account, "123456");
 
-            _authenticationService.Verify(account, "123", "123456");
+            _auth.Verify(account, "123", "123456");
         }
 
         private void ShouldThrow<TException>(TestDelegate action) where TException : Exception
@@ -153,13 +154,13 @@ namespace DependencyInjectionWorkshopTests
 
         private void ShouldBeInvalid(string account, string password, string otp)
         {
-            var isValid = _authenticationService.Verify(account, password, otp);
+            var isValid = _auth.Verify(account, password, otp);
             Assert.IsFalse(isValid);
         }
 
         private void ShouldBeValid(string account, string password, string otp)
         {
-            var isValid = _authenticationService.Verify(account, password, otp);
+            var isValid = _auth.Verify(account, password, otp);
             Assert.IsTrue(isValid);
         }
 
