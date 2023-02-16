@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Autofac;
+using Castle.Core.Logging;
 using DependencyInjectionWorkshop.Models;
 
 namespace MyConsole
@@ -16,21 +18,46 @@ namespace MyConsole
         private static INotification _notification;
         private static IOtp _otp;
         private static IProfileRepo _profileRepo;
+        private static IContainer _container;
 
         static void Main(string[] args)
         {
-            _failCounter = new FakeFailedCounter();
-            _hash = new FakeHash();
-            _myLogger = new FakeLogger();
-            _otp = new FakeOtp();
-            _profileRepo = new FakeProfileRepo();
-            _notification = new FakeSlack();
-            _auth = new AuthenticationService(_profileRepo, _hash, _otp);
-            _auth = new FailCounterDecorator(_auth, _failCounter, _myLogger);
-            _auth = new NotificationDecorator(_auth, _notification);
+            // _failCounter = new FakeFailedCounter();
+            // _hash = new FakeHash();
+            // _myLogger = new FakeLogger();
+            // _otp = new FakeOtp();
+            // _profileRepo = new FakeProfileRepo();
+            // _notification = new FakeSlack();
+            // _auth = new AuthenticationService(_profileRepo, _hash, _otp);
+            // _auth = new FailCounterDecorator(_auth, _failCounter, _myLogger);
+            // _auth = new NotificationDecorator(_auth, _notification);
+
             
-            var isValid = _auth.Verify("joey", "abc", "123456");
+            RegisterContainer();
+
+            var authentication = _container.Resolve<IAuth>();
+            var isValid = authentication.Verify("joey", "abc", "123456");
             Console.WriteLine($"console result is {isValid}");
+        }
+        
+        private static void RegisterContainer()
+        {
+            var builder = new ContainerBuilder();
+            builder.RegisterType<FakeProfileRepo>().As<IProfileRepo>();
+            builder.RegisterType<FakeOtp>().As<IOtp>();
+            builder.RegisterType<FakeHash>().As<IHash>();
+            builder.RegisterType<FakeLogger>().As<IMyLogger>();
+            builder.RegisterType<FakeFailedCounter>().As<IFailCounter>();
+            // builder.RegisterType<FakeSlack>().As<INotification>();
+            builder.RegisterType<FakeLine>().As<INotification>()
+                   .SingleInstance();
+
+            builder.RegisterType<AuthenticationService>().As<IAuth>();
+
+            builder.RegisterDecorator<FailCounterDecorator, IAuth>();
+            // builder.RegisterDecorator<NotificationDecorator, IAuth>();
+
+            _container = builder.Build();
         }
     }
 
@@ -54,7 +81,8 @@ namespace MyConsole
             Console.WriteLine($"logger: {message}");
         }
     }
-    internal class FakeProfileRepo :IProfileRepo
+
+    internal class FakeProfileRepo : IProfileRepo
     {
         public string GetPasswordFromDb(string account)
         {
@@ -133,8 +161,8 @@ namespace MyConsole
         public string GetHashedResult(string plainText)
         {
             Console.WriteLine($"{nameof(FakeHash)}.{nameof(GetHashedResult)}({plainText})");
-            return "91";
-            // return "wrong password";
+            // return "91";
+            return "wrong password";
         }
     }
 }
