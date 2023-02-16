@@ -176,37 +176,30 @@ namespace MyConsole
 
         static void Main(string[] args)
         {
-            // // _failCounter = new FakeFailedCounter();
-            // // _hash = new FakeHash();
-            // // _myLogger = new FakeLogger();
-            // // _otp = new FakeOtp();
-            // // _profileRepo = new FakeProfileRepo();
-            // // _notification = new FakeSlack();
-            // // _auth = new AuthenticationService(_profileRepo, _hash, _otp);
-            // // _auth = new FailCounterDecorator(_auth, _failCounter, _myLogger);
-            // // _auth = new NotificationDecorator(_auth, _notification);
-            //
-            // RegisterContainer();
-            //
-            // var authentication = _container.Resolve<IAuth>();
-            // try
-            // {
-            //     var isValid = authentication.Verify("joey", "abc", "123456");
-            //     Console.WriteLine($"console result is {isValid}");
-            // }
-            // catch (Exception e)
-            // {
-            //     Console.WriteLine("console crash:" + e.Message);
-            // }
+            // _failCounter = new FakeFailedCounter();
+            // _hash = new FakeHash();
+            // _myLogger = new FakeLogger();
+            // _otp = new FakeOtp();
+            // _profileRepo = new FakeProfileRepo();
+            // _notification = new FakeSlack();
+            // _auth = new AuthenticationService(_profileRepo, _hash, _otp);
+            // _auth = new FailCounterDecorator(_auth, _failCounter, _myLogger);
+            // _auth = new NotificationDecorator(_auth, _notification);
 
-            // var orderService = new OrderService();
             RegisterContainer();
-            var orderService = _container.Resolve<OrderService>();
 
-            Console.WriteLine(orderService.CreateGuid("Joey", 91));
-            Console.WriteLine(orderService.CreateGuid("Joey", 91));
-            Console.WriteLine(orderService.CreateGuid("Tom", 66));
-            Console.WriteLine(orderService.CreateGuid("Joey", 91));
+            var authentication = _container.Resolve<IAuth>();
+            var isValid = authentication.Verify("joey", "abc", "123456");
+            Console.WriteLine($"console result is {isValid}");
+
+            // // var orderService = new OrderService();
+            // RegisterContainer();
+            // var orderService = _container.Resolve<OrderService>();
+            //
+            // Console.WriteLine(orderService.CreateGuid("Joey", 91));
+            // Console.WriteLine(orderService.CreateGuid("Joey", 91));
+            // Console.WriteLine(orderService.CreateGuid("Tom", 66));
+            // Console.WriteLine(orderService.CreateGuid("Joey", 91));
         }
 
         private static void RegisterContainer()
@@ -217,7 +210,6 @@ namespace MyConsole
             builder.RegisterType<FakeHash>().As<IHash>();
             builder.RegisterType<FakeLogger>().As<IMyLogger>();
             builder.RegisterType<FakeFailedCounter>().As<IFailCounter>();
-            // builder.RegisterType<FakeSlack>().As<INotification>();
 
             builder.RegisterType<MemoryCacheProvider>().As<ICacheProvider>();
 
@@ -232,15 +224,15 @@ namespace MyConsole
             builder.RegisterType<AlarmInterceptor>().As<AlarmInterceptor>();
 
             builder.RegisterType<LogInterceptor>().As<LogInterceptor>();
-            builder.RegisterType<FakeLine>()
-                   .As<INotification>()
-                   .EnableInterfaceInterceptors()
-                   .InterceptedBy(typeof(LogInterceptor));
+            builder.RegisterType<FakeSlack>();
+            builder.RegisterType<FakeLine>();
+            builder.RegisterType<FakeFeatureToggle>().As<IFeatureToggle>();
+            builder.RegisterType<NotificationDispatcher>().As<INotification>();
 
             builder.RegisterType<AuthenticationService>()
-                   .As<IAuth>()
-                   .EnableInterfaceInterceptors()
-                   .InterceptedBy(typeof(LogInterceptor), typeof(AlarmInterceptor));
+                   .As<IAuth>();
+            // .EnableInterfaceInterceptors()
+            // .InterceptedBy(typeof(LogInterceptor), typeof(AlarmInterceptor));
 
             builder.RegisterDecorator<FailCounterDecorator, IAuth>();
             builder.RegisterDecorator<NotificationDecorator, IAuth>();
@@ -249,15 +241,41 @@ namespace MyConsole
         }
     }
 
+    public class NotificationDispatcher : INotification
+    {
+        private readonly IFeatureToggle _featureToggle;
+        private readonly FakeLine _line;
+        private readonly FakeSlack _slack;
+
+        public NotificationDispatcher(IFeatureToggle featureToggle, FakeLine line, FakeSlack slack)
+        {
+            _featureToggle = featureToggle;
+            _line = line;
+            _slack = slack;
+        }
+
+        public void NotifyUser(string message)
+        {
+            if (_featureToggle.IsEnable("line"))
+            {
+                _line.NotifyUser(message);
+            }
+            else
+            {
+                _slack.NotifyUser(message);
+            }
+        }
+    }
+
     internal class FakeFeatureToggle : IFeatureToggle
     {
         public bool IsEnable(string feature)
         {
-            return true;
+            return false;
         }
     }
 
-    internal interface IFeatureToggle
+    public interface IFeatureToggle
     {
         bool IsEnable(string feature);
     }
@@ -279,7 +297,7 @@ namespace MyConsole
         }
     }
 
-    internal class FakeLine : INotification
+    public class FakeLine : INotification
     {
         public void NotifyUser(string message)
         {
@@ -292,7 +310,7 @@ namespace MyConsole
         }
     }
 
-    internal class FakeSlack : INotification
+    public class FakeSlack : INotification
     {
         public void NotifyUser(string message)
         {
@@ -331,7 +349,7 @@ namespace MyConsole
         public bool IsAccountLocked(string accountId)
         {
             Console.WriteLine($"{nameof(FakeFailedCounter)}.{nameof(IsAccountLocked)}({accountId})");
-            return true;
+            return false;
         }
     }
 
