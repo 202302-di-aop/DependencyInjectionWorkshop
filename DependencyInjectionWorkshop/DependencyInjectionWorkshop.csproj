@@ -79,6 +79,7 @@
     <Compile Include="Models\FailCounter.cs" />
     <Compile Include="Models\FailCounterDecorator.cs" />
     <Compile Include="Models\NLogAdapter.cs" />
+    <Compile Include="Models\NotificationDecorator.cs" />
     <Compile Include="Models\OtpAdapter.cs" />
     <Compile Include="Models\ProfileRepo.cs" />
     <Compile Include="Models\Sha256Adapter.cs" />
