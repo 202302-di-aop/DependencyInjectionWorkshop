@@ -55,7 +55,7 @@ namespace MyConsole
             builder.RegisterType<AuthenticationService>().As<IAuth>();
 
             builder.RegisterDecorator<FailCounterDecorator, IAuth>();
-            // builder.RegisterDecorator<NotificationDecorator, IAuth>();
+            builder.RegisterDecorator<NotificationDecorator, IAuth>();
 
             _container = builder.Build();
         }
