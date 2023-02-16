@@ -9,8 +9,28 @@ namespace MyConsole
 {
     class Program
     {
+        private static IAuth _auth;
+        private static IFailCounter _failCounter;
+        private static IHash _hash;
+        private static IMyLogger _myLogger;
+        private static INotification _notification;
+        private static IOtp _otp;
+        private static IProfileRepo _profileRepo;
+
         static void Main(string[] args)
         {
+            _failCounter = new FakeFailedCounter();
+            _hash = new FakeHash();
+            _myLogger = new FakeLogger();
+            _otp = new FakeOtp();
+            _profileRepo = new FakeProfileRepo();
+            _notification = new FakeSlack();
+            _auth = new AuthenticationService(_profileRepo, _hash, _otp);
+            _auth = new FailCounterDecorator(_auth, _failCounter, _myLogger);
+            _auth = new NotificationDecorator(_auth, _notification);
+            
+            var isValid = _auth.Verify("joey", "abc", "123456");
+            Console.WriteLine($"console result is {isValid}");
         }
     }
 
@@ -32,6 +52,14 @@ namespace MyConsole
         public void LogInfo(string message)
         {
             Console.WriteLine($"logger: {message}");
+        }
+    }
+    internal class FakeProfileRepo :IProfileRepo
+    {
+        public string GetPasswordFromDb(string account)
+        {
+            Console.WriteLine("profile repo get password");
+            return "91";
         }
     }
 
@@ -76,7 +104,7 @@ namespace MyConsole
         public int Get(string account)
         {
             Console.WriteLine($"{nameof(FakeFailedCounter)}.{nameof(Get)}({account})");
-            return 91;
+            return 3;
         }
 
         public void Add(string accountId)
@@ -105,7 +133,8 @@ namespace MyConsole
         public string GetHashedResult(string plainText)
         {
             Console.WriteLine($"{nameof(FakeHash)}.{nameof(GetHashedResult)}({plainText})");
-            return "my hashed password";
+            return "91";
+            // return "wrong password";
         }
     }
 }
