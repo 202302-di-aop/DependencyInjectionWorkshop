@@ -4,11 +4,33 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Extras.DynamicProxy;
 using Castle.Core.Logging;
+using Castle.DynamicProxy;
 using DependencyInjectionWorkshop.Models;
 
 namespace MyConsole
 {
+    public class LogInterceptor : IInterceptor
+    {
+        private readonly IMyLogger _logger;
+
+        public LogInterceptor(IMyLogger logger)
+        {
+            _logger = logger;
+        }
+
+        public void Intercept(IInvocation invocation)
+        {
+            var signatureContent = $"log by interceptor:{invocation.TargetType.FullName}.{invocation.Method.Name}():" +
+                $"{string.Join("-", (invocation.Arguments.Select(x => (x ?? "").ToString())))}";
+
+            _logger.LogInfo(signatureContent);
+
+            invocation.Proceed();
+        }
+    }
+
     class Program
     {
         private static IAuth _auth;
@@ -32,14 +54,13 @@ namespace MyConsole
             // _auth = new FailCounterDecorator(_auth, _failCounter, _myLogger);
             // _auth = new NotificationDecorator(_auth, _notification);
 
-            
             RegisterContainer();
 
             var authentication = _container.Resolve<IAuth>();
             var isValid = authentication.Verify("joey", "abc", "123456");
             Console.WriteLine($"console result is {isValid}");
         }
-        
+
         private static void RegisterContainer()
         {
             var builder = new ContainerBuilder();
@@ -49,10 +70,17 @@ namespace MyConsole
             builder.RegisterType<FakeLogger>().As<IMyLogger>();
             builder.RegisterType<FakeFailedCounter>().As<IFailCounter>();
             // builder.RegisterType<FakeSlack>().As<INotification>();
-            builder.RegisterType<FakeLine>().As<INotification>()
-                   .SingleInstance();
+            builder.RegisterType<LogInterceptor>().As<LogInterceptor>();
+            builder.RegisterType<FakeLine>()
+                   .As<INotification>()
+                   .EnableInterfaceInterceptors()
+                   .InterceptedBy(typeof(LogInterceptor));
 
-            builder.RegisterType<AuthenticationService>().As<IAuth>();
+
+            builder.RegisterType<AuthenticationService>()
+                   .As<IAuth>()
+                   .EnableInterfaceInterceptors()
+                   .InterceptedBy(typeof(LogInterceptor));
 
             builder.RegisterDecorator<FailCounterDecorator, IAuth>();
             builder.RegisterDecorator<NotificationDecorator, IAuth>();
